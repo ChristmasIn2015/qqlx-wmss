@@ -257,10 +257,15 @@ export class OrderController extends CorpLock {
                 return sku;
             }),
             bookOfOrderList: bookOfOrders,
+            //@ts-ignore
             joinCreator: userInfos.find((u) => u.userId === order.creatorId),
+            //@ts-ignore
             joinManager: userInfos.find((u) => u.userId === order.managerId),
+            //@ts-ignore
             joinAccounter: userInfos.find((u) => u.userId === order.accounterId),
+            //@ts-ignore
             joinChildOrder: _orders.filter((e) => e.parentOrderId === order._id),
+            //@ts-ignore
             joinParentOrder: _orders.filter((e) => e._id === order.parentOrderId),
         };
     }
