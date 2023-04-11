@@ -45,7 +45,7 @@ export class JoinService extends CorpLock {
 
                     // SKU
                     const skus = await this.SkuDao.query({ orderId });
-                    skus.map((sku) => (updater.amount += (sku.isPriceInPounds ? sku.pounds : sku.count) * sku.price));
+                    skus.map((sku) => (updater.amount += (sku.isPriceInPounds ? sku.pounds / 1000 : sku.count) * sku.price));
 
                     // BOOK
                     const aggre3 = await this.BookOfOrderDao.aggregate([
@@ -56,6 +56,10 @@ export class JoinService extends CorpLock {
                     updater.amountBookOfOrder = aggre3[0]?.total ?? 0;
                     updater.amountBookOfOrderRest = updater.amount - updater.amountBookOfOrder;
 
+                    // 金额换算
+                    updater.amount /= 100;
+                    updater.amountBookOfOrder /= 100;
+                    updater.amountBookOfOrderRest /= 100;
                     await this.OrderDao.updateOne(orderId, updater);
                 } catch (error) {
                     errorMessage = error.message;
@@ -92,13 +96,17 @@ export class JoinService extends CorpLock {
 
                     // 资金-订单-发票
                     const aggre2 = await this.BookOfSelfDao.aggregate([
-                        { $match: { bookId: book._id } },
+                        { $match: { $or: [{ invoiceId: book._id }, { bookId: book._id }] } },
                         { $group: { _id: "result", total: { $sum: "$amount" } } },
                     ]);
                     updater.amountBookOfSelf = aggre2[0]?.total ?? 0;
                     updater.amountBookOfSelfRest = book.amount - updater.amountBookOfSelf;
 
-                    // 执行
+                    // 金额换算
+                    updater.amountBookOfOrder /= 100;
+                    updater.amountBookOfOrderRest /= 100;
+                    updater.amountBookOfSelf /= 100;
+                    updater.amountBookOfSelfRest /= 100;
                     await this.BookDao.updateOne(book._id, updater);
                 } catch (error) {
                     errorMessage = error.message;

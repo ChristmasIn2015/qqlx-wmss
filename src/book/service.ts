@@ -19,19 +19,19 @@ export class BookService {
     async getBookJoined(bookIds: string[], sortKey?: string, sortValue?: MongodbSort): Promise<BookJoined[]> {
         const books = await this.BookDao.query({ _id: { $in: bookIds } }, { sortKey, sortValue });
 
-        const order_ofs = await this.getBookOfOrder(books);
+        const order_ofs = await this.getBookOfOrder(books.map((e) => e._id));
         const self_ofs = await this.getBookOfSelf(books);
 
         return (books as BookJoined[]).map((book) => {
             book.joinBookOfOrder = order_ofs.filter((ee) => ee.bookId === book._id);
-            book.joinBookOfSelf = self_ofs.filter((ee) => ee.bookId === book._id);
+            book.joinBookOfSelf = self_ofs.filter((ee) => ee.invoiceId === book._id);
             return book;
         });
     }
 
-    async getBookOfOrder(books: Book[]): Promise<BookOfOrder[]> {
+    async getBookOfOrder(bookIds: string[]): Promise<BookOfOrder[]> {
         const result = await this.BookOfOrderDao.aggregate([
-            { $match: { bookId: { $in: books.map((e) => e._id) } } },
+            { $match: { bookId: { $in: bookIds } } },
             { $lookup: { from: "orders", localField: "orderId", foreignField: "_id", as: "joinOrder" } },
             { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinContact" } },
         ]);
@@ -45,7 +45,7 @@ export class BookService {
 
     async getBookOfSelf(books: Book[]): Promise<BookOfSelf[]> {
         const result = await this.BookOfSelfDao.aggregate([
-            { $match: { bookId: { $in: books.map((e) => e._id) } } },
+            { $match: { invoiceId: { $in: books.map((e) => e._id) } } },
             { $lookup: { from: "books", localField: "bookId", foreignField: "_id", as: "joinBook" } },
         ]);
         result.forEach((e) => {
@@ -64,7 +64,9 @@ export class BookService {
     }
 
     async deleteBookOfSelfs(corpId: string, invoiceIds: string[]) {
-        const ofs = await this.BookOfSelfDao.query({ invoiceId: { $in: invoiceIds } });
+        const match = { $or: [{ invoiceId: { $in: invoiceIds } }] };
+
+        const ofs = await this.BookOfSelfDao.query(match);
         await this.BookOfSelfDao.deleteMany(ofs.map((e) => e._id));
 
         const bookIds = [...new Set(ofs.map((e) => e.bookId))];

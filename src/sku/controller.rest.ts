@@ -40,6 +40,11 @@ export class SkuController {
             corpId: BrandDTO.corp._id,
             orderIsDisabled: false,
             isConfirmed: search.isConfirmed,
+            type: { $in: dto.types },
+            layout:
+                search.layout === ENUM_LAYOUT_CABINET.INDIVIDUAL
+                    ? ENUM_LAYOUT_CABINET.INDIVIDUAL
+                    : { $in: [ENUM_LAYOUT_CABINET.INDIVIDUAL, ENUM_LAYOUT_CABINET.SUMMARY] },
         };
         const query = {
             ...base,
@@ -51,16 +56,6 @@ export class SkuController {
             ...(search.keyCode && { keyCode: new RegExp(search.keyCode) }),
             ...(search.orderContactId && { orderContactId: search.orderContactId }),
         };
-
-        // 大件商品，已入库库存
-        // if (dto.isIndividual) {
-        //     query["type"] = [ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS];
-        //     query["layout"] = ENUM_LAYOUT_CABINET.INDIVIDUAL;
-        //     query["isConfirmed"] = true;
-        // } else {
-        //     query["type"] = { $in: [ENUM_ORDER.GETIN, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL, ENUM_ORDER.PROCESS] };
-        //     // query["layout"] = ENUM_LAYOUT_CABINET.SUMMARY;
-        // }
 
         // 排序
         const option = {
@@ -76,19 +71,13 @@ export class SkuController {
             dto.sortValue
         );
 
+        // View
+        page.list.forEach((sku) => {
+            sku.pounds /= 1000;
+            sku.poundsFinal /= 1000;
+            sku.price /= 100;
+        });
         return page;
-    }
-
-    @Post("/byOrder/get")
-    @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
-    async getSkuByOrder(@Body("dto") dto: getSkuByOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuByOrderRes> {
-        const { orderId } = dto;
-
-        // 查询
-        const skus = await this.SkuDao.query({ orderId, corpId: BrandDTO.corp._id });
-        const SkuJoineds = await this.SkuService.getSkuJoined(skus.map((e) => e._id));
-
-        return SkuJoineds;
     }
 
     @Patch()

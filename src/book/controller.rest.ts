@@ -16,6 +16,7 @@ import {
     deleteBookRes,
     Book,
     BookOfOrder,
+    BookJoined,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -44,16 +45,18 @@ export class BookController extends CorpLock {
     async postBook(@Body("dto") dto: postBookDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<postBookRes> {
         if (dto.excels?.length > 100) throw new Error(`上传限制 100 项`);
 
+        const entitys = [];
         for (let schema of dto.excels) {
             schema.corpId = BrandDTO.corp._id;
             schema.code = await this.getCode(BrandDTO.corp._id, schema.direction, schema.type, schema.timeCreate);
             schema.amount = Number(schema.amount);
             schema.amountBookOfOrderRest = schema.amount;
             schema.amountBookOfSelfRest = schema.amount;
-            await this.BookDao.create(schema);
+            const entity = await this.BookDao.create(schema);
+            entitys.push(entity);
         }
 
-        return null;
+        return entitys;
     }
 
     @Post("/get")
@@ -98,6 +101,28 @@ export class BookController extends CorpLock {
             option.sortValue
         );
 
+        // 金额换算
+        page.list.forEach((book: BookJoined) => {
+            book.amount /= 100;
+            book.amountBookOfOrder /= 100;
+            book.amountBookOfOrderRest /= 100;
+            book.amountBookOfSelf /= 100;
+            book.amountBookOfSelfRest /= 100;
+            book.joinBookOfOrder.forEach((e) => {
+                e.amount /= 100;
+                e.joinOrder.amount /= 100;
+                e.joinOrder.amountBookOfOrder /= 100;
+                e.joinOrder.amountBookOfOrderRest /= 100;
+            });
+            book.joinBookOfSelf.forEach((e) => {
+                e.amount /= 100;
+                e.joinBook.amount /= 100;
+                e.joinBook.amountBookOfOrder /= 100;
+                e.joinBook.amountBookOfOrderRest /= 100;
+                e.joinBook.amountBookOfSelf /= 100;
+                e.joinBook.amountBookOfSelfRest /= 100;
+            });
+        });
         return page;
     }
 
@@ -114,6 +139,7 @@ export class BookController extends CorpLock {
             ...(isInvoice && { keyCode: dto.entity.keyCode }),
             ...(isInvoice && { keyOrigin: dto.entity.keyOrigin }),
             ...(isInvoice && { keyHouse: dto.entity.keyHouse }),
+            ...(dto.entity.timeCreate && { timeCreate: Number(dto.entity.timeCreate) }),
         };
         const entity = await this.BookDao.updateOne(dto.entity._id, updater);
         if (entity.isDisabled === true) return null;
@@ -121,20 +147,21 @@ export class BookController extends CorpLock {
         // 订单相关
         if (dto.orders) {
             await this.bookService.deleteBookOfOrders(BrandDTO.corp._id, [entity._id]);
-            for (let order of dto.orders) {
+            for (const order of dto.orders) {
                 const schema = this.BookOfOrderDao.getSchema();
                 schema.bookId = entity._id;
-                schema.amount = Number(order.amountBookOfOrderRest) || 0;
+                schema.amount = Number(order.amount) || 0;
                 schema.orderId = order._id;
                 schema.orderContactId = order.contactId;
                 schema.amount > 0 && (await this.BookOfOrderDao.create(schema));
                 await this.JoinService.resetAmountOrder(BrandDTO.corp._id, order._id);
             }
         }
+
         // 发票相关
-        else if (dto.books) {
+        if (dto.books) {
             await this.bookService.deleteBookOfSelfs(BrandDTO.corp._id, [entity._id]);
-            for (let book of dto.books) {
+            for (const book of dto.books) {
                 const schema = this.BookOfSelfDao.getSchema();
                 schema.invoiceId = entity._id;
                 schema.amount = Number(book.amount) || 0;
@@ -153,7 +180,7 @@ export class BookController extends CorpLock {
     async deleteBook(@Body("dto") dto: deleteBookDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<deleteBookRes> {
         const deleting: Book[] = [];
 
-        for (let id of dto.bookIds || []) {
+        for (const id of dto.bookIds || []) {
             const exist = await this.BookDao.findOne(id);
             if (exist) {
                 const wanner = !exist.isDisabled;
@@ -165,6 +192,10 @@ export class BookController extends CorpLock {
 
         if (deleting.length > 0) {
             await this.bookService.deleteBookOfOrders(
+                BrandDTO.corp._id,
+                deleting.map((e) => e._id)
+            );
+            await this.bookService.deleteBookOfSelfs(
                 BrandDTO.corp._id,
                 deleting.map((e) => e._id)
             );

@@ -20,6 +20,7 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor {
         const path = request.path;
 
         const chain: string = (request.body.UserDTO || request.body.BrandDTO)?.chain || randomUUID();
+        this.LogRemote.log(ENUM_LOG.TRACE, path, chain); // async
 
         return next.handle().pipe(
             map((data) => {

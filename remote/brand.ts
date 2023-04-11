@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ClientProxy, ClientProxyFactory, Transport } from "@nestjs/microservices";
 
+import { Response } from "qqlx-cdk";
 import { Log, ENUM_CORP, Corp, Contact } from "qqlx-core";
 import { HOST_MID_BRAND, PORT_MID_BRAND, getCorpDto, getCorpRes, getContactDto, getContactRes, chargeRpcResponse } from "qqlx-sdk";
 
@@ -16,9 +17,8 @@ export class BrandRemote {
     }
 
     async getCorp(dto: getCorpDto): Promise<Corp> {
-        const res: getCorpRes = await this.client.send("getCorp", dto).toPromise(); // event async
+        const res: Response<Corp> = await this.client.send("getCorp", dto).toPromise(); // event async
         const info = chargeRpcResponse(res);
-
         return info;
     }
 

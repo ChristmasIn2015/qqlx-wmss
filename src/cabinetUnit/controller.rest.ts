@@ -62,7 +62,10 @@ export class CabinetUnitController {
             { $sort: { [dto.sortKey]: dto.sortValue } },
             { $lookup: { from: "cabinets", localField: "cabinetId", foreignField: "_id", as: "joinCabinet" } },
         ]);
-        list.forEach((e) => e.joinCabinet && (e.joinCabinet = e.joinCabinet[0]));
+        list.forEach((e) => {
+            e.joinCabinet && (e.joinCabinet = e.joinCabinet[0]);
+            e.poundsFinal /= 1000;
+        });
 
         page.list = list;
         return page as PageRes<CabinetUnitJoined>;

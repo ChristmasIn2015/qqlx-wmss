@@ -11,13 +11,17 @@ import { UserRemote } from "remote/user";
 import { BrandRemote } from "remote/brand";
 import { MarketRemote } from "remote/market";
 import { JoinService } from "src/join/service";
+import { ClueService } from "src/clue/service";
 import { BookService } from "src/book/service";
 import { SkuService } from "src/sku/service";
 import { OrderService } from "src/order/service";
 import { CabinetUnitService } from "src/cabinetUnit/service";
 
+import { AnalysisController } from "src/analysis/controller.rest";
+import { ClueController } from "src/clue/controller.rest";
 import { BookController } from "src/book/controller.rest";
 import { CabinetController } from "src/cabinet/controller.rest";
+import { CabinetUnitController } from "src/cabinetUnit/controller.rest";
 import { OrderController } from "src/order/controller.rest";
 import { SkuController } from "src/sku/controller.rest";
 
@@ -25,17 +29,26 @@ import { SkuController } from "src/sku/controller.rest";
     imports: [
         MongooseModule.forRoot("mongodb://127.0.0.1:27017/qqlx"),
         MongooseModule.forFeature([
+            { name: Clue.name, schema: ClueSchema },
             { name: Book.name, schema: BookSchema },
             { name: BookOfOrder.name, schema: BookOfOrderSchema },
             { name: BookOfSelf.name, schema: BookOfSelfSchema },
             { name: Cabinet.name, schema: CabinetSchema },
             { name: CabinetUnit.name, schema: CabinetUnitSchema },
-            { name: Clue.name, schema: ClueSchema },
             { name: Order.name, schema: OrderSchema },
             { name: Sku.name, schema: SkuSchema },
         ]),
     ],
-    controllers: [BookController, CabinetController, OrderController, SkuController],
+    controllers: [
+        AnalysisController,
+        BookController,
+        CabinetController,
+        CabinetUnitController,
+        OrderController,
+        SkuController,
+        ClueController,
+        //
+    ],
     providers: [
         BookDao,
         BookOfOrderDao,
@@ -50,6 +63,7 @@ import { SkuController } from "src/sku/controller.rest";
         BrandRemote,
         MarketRemote,
         JoinService,
+        ClueService,
         BookService,
         CabinetUnitService,
         SkuService,

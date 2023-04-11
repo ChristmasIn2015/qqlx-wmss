@@ -25,7 +25,6 @@ export class Book implements _Book {
     code: string;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amount: number;
@@ -43,26 +42,22 @@ export class Book implements _Book {
 
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfOrder: number;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfOrderRest: number;
 
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfSelf: number;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfSelfRest: number;
@@ -97,8 +92,7 @@ export class BookOfOrder implements _BookOfOrder {
     orderContactId: string;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
-        set: (value) => (Number(value) || 0) * 100,
+        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amount: number;
 
@@ -130,8 +124,7 @@ export class BookOfSelf implements _BookOfSelf {
     bookId: string;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
-        set: (value) => (Number(value) || 0) * 100,
+        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amount: number;
 

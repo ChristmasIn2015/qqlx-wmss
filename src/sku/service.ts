@@ -17,6 +17,11 @@ export class SkuService extends CorpLock {
         super();
     }
 
+    /**
+     * @pounds 000 kg
+     * @count 个
+     * @amount 00 分
+     * */
     async createSku(schemaList: Sku[], order: Order): Promise<Calculation<Sku>> {
         const calculation: Calculation<Sku> = { list: [], pounds: 0, count: 0, amount: 0 };
 
@@ -24,9 +29,9 @@ export class SkuService extends CorpLock {
             const entity = await this.createSkuSingle(schema, order);
 
             const isIndividual = entity.layout == ENUM_LAYOUT_CABINET.INDIVIDUAL;
-            // 入库 加工，如果选择了仓库  && entity.warehouseId，则自动确认
+            // 如果是 @入库 @加工 的商品
             const charge1 = [ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS].includes(entity.type);
-            // 领料，如果选择了需要扣减的原材料，则自动确认
+            // 如果是 @领料 的商品
             const charge2 = entity.type === ENUM_ORDER.MATERIAL && entity.deductionSkuId;
             // 发货，如果需要发货原材料并且已经包含扣减的原材料，则自动确认
             const charge3 = entity.type === ENUM_ORDER.GETOUT && (isIndividual ? !!entity.deductionSkuId : true);
@@ -37,7 +42,9 @@ export class SkuService extends CorpLock {
             calculation.list.push(entity);
             calculation.pounds += entity.pounds;
             calculation.count += entity.count;
-            calculation.amount += parseInt((entity.price * (entity.isPriceInPounds ? entity.pounds : entity.count)).toString());
+            calculation.amount += entity.isPriceInPounds
+                ? parseInt((entity.price * (entity.pounds / 1000)).toString())
+                : parseInt((entity.price * entity.count).toString());
         }
 
         return calculation;
@@ -50,7 +57,7 @@ export class SkuService extends CorpLock {
         schema.count = Number(schema.count) || 0;
         schema.poundsFinal = schema.pounds;
         schema.countFinal = schema.count;
-        schema.deductionSkuId = "";
+        // schema.deductionSkuId = "";
 
         schema.price = Number(schema.price);
         schema.isPriceInPounds = !!schema.isPriceInPounds;
@@ -74,7 +81,7 @@ export class SkuService extends CorpLock {
         const query: any = [
             { $match: { _id: { $in: ids } } },
             { $sort: sort },
-            { $lookup: { from: "warehouses", localField: "keyHouseId", foreignField: "_id", as: "joinWarehouse" } },
+            // { $lookup: { from: "warehouses", localField: "keyHouseId", foreignField: "_id", as: "joinWarehouse" } },
             { $lookup: { from: "orders", localField: "orderId", foreignField: "_id", as: "joinOrder" } },
             { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinOrderContact" } },
         ];
@@ -88,11 +95,15 @@ export class SkuService extends CorpLock {
         return skus;
     }
 
-    async getSkuMatched(match: Object, sortKey: string = "timeCreate", sortValue: MongodbSort = MongodbSort.DES): Promise<SkuJoined[]> {
+    private async getSkuMatched(match: Object, sortKey: string = "timeCreate", sortValue: MongodbSort = MongodbSort.DES): Promise<SkuJoined[]> {
         const sort = {};
         sort[sortKey] = sortValue;
 
-        const query: any = [{ $match: match }, { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinOrderContact" } }];
+        const query: any = [
+            { $match: match },
+            { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinOrderContact" } },
+            //
+        ];
         const skus: SkuJoined[] = await this.SkuDao.aggregate(query);
 
         skus.forEach((rela) => {
@@ -102,23 +113,30 @@ export class SkuService extends CorpLock {
         return skus;
     }
 
-    async setOrderSku(joinedList: OrderJoined[]): Promise<OrderJoined[]> {
-        const skus = await this.getSkuMatched({ orderId: { $in: joinedList.map((e) => e._id) } });
-        for (let order of joinedList) {
+    async setOrderSku(orders: OrderJoined[]): Promise<OrderJoined[]> {
+        const skus = await this.getSkuMatched({ orderId: { $in: orders.map((e) => e._id) } });
+        for (const order of orders) {
             order["joinSku"] = skus.filter((e) => e.orderId === order._id).reverse();
         }
-        return joinedList;
+        return orders;
     }
 
+    /**
+     * @pounds 000 kg
+     * @count 个
+     * @amount 00 分
+     * */
     async getSkuCalculation(filter: Object): Promise<Calculation<Sku>> {
         const calculation: Calculation<Sku> = { list: [], pounds: 0, count: 0, amount: 0 };
         const skus = await this.SkuDao.query(filter);
 
-        for (let entity of skus) {
+        for (const entity of skus) {
             calculation.list.push(entity);
             calculation.pounds += entity.pounds;
             calculation.count += entity.count;
-            calculation.amount += parseInt((entity.price * (entity.isPriceInPounds ? entity.pounds : entity.count)).toString());
+            calculation.amount += entity.isPriceInPounds
+                ? parseInt((entity.price * (entity.pounds / 1000)).toString())
+                : parseInt((entity.price * entity.count).toString());
         }
 
         return calculation;
@@ -172,7 +190,7 @@ export class SkuService extends CorpLock {
                 try {
                     // 入库库存
                     const deductionSku = await this.SkuDao.findOne(exist.deductionSkuId);
-                    if (!deductionSku || deductionSku.type !== ENUM_ORDER.GETIN) return;
+                    if (!deductionSku || ![ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS].includes(deductionSku.type)) return;
 
                     // -发货库存 -领料库存
                     const match = {
@@ -189,7 +207,7 @@ export class SkuService extends CorpLock {
                     ]);
 
                     const updater = {
-                        poundsFinal: deductionSku.pounds - (aggre[0]?.pounds ?? 0),
+                        poundsFinal: (deductionSku.pounds - (aggre[0]?.pounds ?? 0)) / 1000,
                         countFinal: deductionSku.count - (aggre[0]?.count ?? 0),
                     };
                     exist = await this.SkuDao.updateOne(deductionSku._id, updater);

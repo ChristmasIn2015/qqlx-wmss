@@ -33,24 +33,27 @@ export class Sku implements _ {
 
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 1000,
         set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
     })
     pounds: number;
-    @Prop({ default: 0 })
+    @Prop({
+        default: 0,
+        set: (value) => parseInt((Number(value) || 0).toString()),
+    })
     count: number;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 1000,
         set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
     })
     poundsFinal: number;
-    @Prop({ default: 0 })
+    @Prop({
+        default: 0,
+        set: (value) => parseInt((Number(value) || 0).toString()),
+    })
     countFinal: number;
 
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     price: number;

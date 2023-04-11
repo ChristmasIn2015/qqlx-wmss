@@ -56,7 +56,6 @@ export class Order implements _ {
     code: string;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amount: number;
@@ -67,13 +66,11 @@ export class Order implements _ {
 
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfOrder: number;
     @Prop({
         default: 0,
-        get: (value) => (Number(value) || 0) / 100,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfOrderRest: number;

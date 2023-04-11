@@ -7,7 +7,8 @@
     "license": "MIT",
     "scripts": {
         "build": "nest build",
-        "dev": "nest start --watch"
+        "dev": "nest start --watch",
+        "update": "yarn add qqlx-cdk && yarn add qqlx-core && yarn add qqlx-sdk"
     },
     "dependencies": {
         "@nestjs/common": "^9.0.0",
@@ -19,9 +20,9 @@
         "async-lock": "^1.4.0",
         "jsonwebtoken": "^9.0.0",
         "mongoose": "^6.8.3",
-        "qqlx-cdk": "^0.0.7",
-        "qqlx-core": "^1.0.16",
-        "qqlx-sdk": "^0.0.29",
+        "qqlx-cdk": "^0.0.13",
+        "qqlx-core": "^1.0.28",
+        "qqlx-sdk": "^0.0.38",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.2.0"
     },

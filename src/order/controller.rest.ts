@@ -13,6 +13,9 @@ import {
     deleteOrderDto,
     deleteOrderRes,
     OrderJoined,
+    getSkuByOrderDto,
+    getSkuByOrderRes,
+    BookOfOrder,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -20,10 +23,12 @@ import { BrandGuard, ENUM_BRAND_ROLE_ALL, ENUM_BRAND_ROLE_NORMAL } from "global/
 import { CorpLock } from "global/lock.corp";
 import { OrderDao } from "dao/order";
 import { SkuDao } from "dao/sku";
+import { BookOfOrderDao } from "dao/book";
 
 import { MarketRemote } from "remote/market";
 import { OrderService } from "src/order/service";
 import { SkuService } from "src/sku/service";
+import { BookService } from "src/book/service";
 import { JoinService } from "src/join/service";
 
 @Controller(PATH_ORDER)
@@ -34,9 +39,11 @@ export class OrderController extends CorpLock {
         private readonly SkuService: SkuService,
         private readonly OrderService: OrderService,
         private readonly MarketRemote: MarketRemote,
+        private readonly BookService: BookService,
         //
         private readonly SkuDao: SkuDao,
-        private readonly OrderDao: OrderDao
+        private readonly OrderDao: OrderDao,
+        private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
     }
@@ -82,6 +89,7 @@ export class OrderController extends CorpLock {
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
     async getOrder(@Body("dto") dto: getOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getOrderRes> {
         const search = dto.search;
+
         trimObject(search);
 
         const query = {
@@ -90,6 +98,7 @@ export class OrderController extends CorpLock {
             isDisabled: search.isDisabled,
             ...(search?.contactId && { contactId: search.contactId }),
             ...(search?.code && { code: new RegExp(search.code) }),
+            ...(search?.remark && { code: new RegExp(search.remark) }),
         };
 
         if (dto.requireManagerId) query["managerId"] = "";
@@ -104,12 +113,22 @@ export class OrderController extends CorpLock {
 
         // 查询
         const page = await this.OrderDao.page(query, dto.page, option);
-        const ids = page.list.map((e) => e._id);
 
         // 聚合其他信息
         await this.OrderService.setOrderJoined(page.list, dto);
         if (dto.joinSku) await this.SkuService.setOrderSku(page.list);
 
+        // View
+        page.list.forEach((order) => {
+            order.amount /= 100;
+            order.amountBookOfOrder /= 100;
+            order.amountBookOfOrderRest /= 100;
+            dto.joinSku &&
+                (order as OrderJoined).joinSku.forEach((sku) => {
+                    sku.pounds /= 1000;
+                    sku.price /= 100;
+                });
+        });
         return page;
     }
 
@@ -118,6 +137,7 @@ export class OrderController extends CorpLock {
     async putOrder(@Body("dto") dto: putOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<putOrderRes> {
         const order = await this.OrderDao.findOne(dto.entity._id);
         if (order.isDisabled) throw new Error(`订单已删除，请恢复后试试`);
+        if (order.type === ENUM_ORDER.MATERIAL) throw new Error(`无法修改领料单`);
 
         const updater = {
             contactId: dto.entity.contactId,
@@ -172,8 +192,10 @@ export class OrderController extends CorpLock {
             const updater = { isDisabled: true };
             await this.OrderDao.updateOne(order._id, updater);
 
-            // 如果此订单是关联订单，则需要完全删除
-            if (order.parentOrderId && order.parentOrderType) {
+            // 订单需要完全删除
+            const isRelated = order.parentOrderId && order.parentOrderType;
+            const isWarehouse = [ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS, ENUM_ORDER.MATERIAL, ENUM_ORDER.GETOUT].includes(order.type);
+            if (isRelated || isWarehouse) {
                 await this.SkuDao.deleteMany(calcu.list.map((e) => e._id));
                 await this.OrderDao.delete(order._id);
             }
@@ -191,6 +213,36 @@ export class OrderController extends CorpLock {
         }
 
         return null;
+    }
+
+    @Post("/info/get")
+    @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
+    async getSkuByOrder(@Body("dto") dto: getSkuByOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuByOrderRes> {
+        const { orderId } = dto;
+        const match = { orderId, corpId: BrandDTO.corp._id };
+
+        // 查询
+        const skus = await this.SkuDao.query(match);
+        const SkuJoineds = await this.SkuService.getSkuJoined(skus.map((e) => e._id));
+
+        const bookOfOrders = await this.BookOfOrderDao.aggregate([
+            { $match: { orderId } },
+            { $lookup: { from: "books", localField: "bookId", foreignField: "_id", as: "joinBook" } },
+        ]);
+        bookOfOrders.forEach((e) => {
+            e.amount /= 100;
+            e.joinBook && (e.joinBook = e.joinBook[0]) && (e.joinBook.amount /= 100);
+        });
+
+        // View
+        return {
+            skuList: SkuJoineds.map((sku) => {
+                sku.pounds /= 1000;
+                sku.price /= 100;
+                return sku;
+            }),
+            bookOfOrderList: bookOfOrders,
+        };
     }
 
     private getCode(corpId: string, type: ENUM_ORDER): Promise<string> {
