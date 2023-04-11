@@ -25,6 +25,7 @@ import { OrderDao } from "dao/order";
 import { SkuDao } from "dao/sku";
 import { BookOfOrderDao } from "dao/book";
 
+import { UserRemote } from "remote/user";
 import { MarketRemote } from "remote/market";
 import { OrderService } from "src/order/service";
 import { SkuService } from "src/sku/service";
@@ -39,6 +40,7 @@ export class OrderController extends CorpLock {
         private readonly SkuService: SkuService,
         private readonly OrderService: OrderService,
         private readonly MarketRemote: MarketRemote,
+        private readonly UserRemote: UserRemote,
         private readonly BookService: BookService,
         //
         private readonly SkuDao: SkuDao,
@@ -220,11 +222,14 @@ export class OrderController extends CorpLock {
     async getSkuByOrder(@Body("dto") dto: getSkuByOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuByOrderRes> {
         const { orderId } = dto;
         const match = { orderId, corpId: BrandDTO.corp._id };
+        const order = await this.OrderDao.findOne(orderId);
+        if (!order) throw new Error(`订单异常`);
 
         // 查询
         const skus = await this.SkuDao.query(match);
         const SkuJoineds = await this.SkuService.getSkuJoined(skus.map((e) => e._id));
 
+        // 资金
         const bookOfOrders = await this.BookOfOrderDao.aggregate([
             { $match: { orderId } },
             { $lookup: { from: "books", localField: "bookId", foreignField: "_id", as: "joinBook" } },
@@ -232,6 +237,16 @@ export class OrderController extends CorpLock {
         bookOfOrders.forEach((e) => {
             e.amount /= 100;
             e.joinBook && (e.joinBook = e.joinBook[0]) && (e.joinBook.amount /= 100);
+        });
+
+        // 关系人
+        const userIds = [order.creatorId, order.managerId, order.accounterId];
+        const userInfos = await this.UserRemote.getUserInfoList({ userIds });
+
+        // 关联订单
+        const parentIds = [orderId, order.parentOrderId];
+        const _orders = await this.OrderDao.query({
+            $or: [{ _id: { $in: parentIds } }, { parentOrderId: { $in: parentIds } }],
         });
 
         // View
@@ -242,6 +257,11 @@ export class OrderController extends CorpLock {
                 return sku;
             }),
             bookOfOrderList: bookOfOrders,
+            joinCreator: userInfos.find((u) => u.userId === order.creatorId),
+            joinManager: userInfos.find((u) => u.userId === order.managerId),
+            joinAccounter: userInfos.find((u) => u.userId === order.accounterId),
+            joinChildOrder: _orders.filter((e) => e.parentOrderId === order._id),
+            joinParentOrder: _orders.filter((e) => e._id === order.parentOrderId),
         };
     }
 
