@@ -19,6 +19,7 @@ import {
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
+import { TimeLog } from "global/time.decorate";
 import { BrandGuard, ENUM_BRAND_ROLE_ALL, ENUM_BRAND_ROLE_NORMAL } from "global/brand.guard";
 import { CorpLock } from "global/lock.corp";
 import { OrderDao } from "dao/order";
@@ -219,17 +220,50 @@ export class OrderController extends CorpLock {
 
     @Post("/info/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
-    async getSkuByOrder(@Body("dto") dto: getSkuByOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuByOrderRes> {
+    async getOrderInfo(@Body("dto") dto: getSkuByOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuByOrderRes> {
         const { orderId } = dto;
         const match = { orderId, corpId: BrandDTO.corp._id };
         const order = await this.OrderDao.findOne(orderId);
         if (!order) throw new Error(`订单异常`);
 
-        // 查询
+        const infos = await Promise.all([
+            this._getOrderSkus(match),
+            this._getOrderBooks(order._id),
+            this.UserRemote.getUserInfoList({ userIds: [order.creatorId, order.managerId, order.accounterId] }),
+            this.OrderDao.query({
+                $or: [{ _id: order.parentOrderId }, { parentOrderId: order._id }],
+            }),
+        ]);
+
+        // View
+        return {
+            skuList: infos[0],
+            bookOfOrderList: infos[1],
+            //@ts-ignore
+            joinCreator: infos[2].find((u) => u.userId === order.creatorId),
+            //@ts-ignore
+            joinManager: infos[2].find((u) => u.userId === order.managerId),
+            //@ts-ignore
+            joinAccounter: infos[2].find((u) => u.userId === order.accounterId),
+            //@ts-ignore
+            joinChildOrder: infos[3].filter((e) => e.parentOrderId === order._id),
+            //@ts-ignore
+            joinParentOrder: infos[3].filter((e) => e._id === order.parentOrderId),
+        };
+    }
+
+    private async _getOrderSkus(match: Record<string, any>) {
         const skus = await this.SkuDao.query(match);
         const SkuJoineds = await this.SkuService.getSkuJoined(skus.map((e) => e._id));
 
-        // 资金
+        return SkuJoineds.map((sku) => {
+            sku.pounds /= 1000;
+            sku.price /= 100;
+            return sku;
+        });
+    }
+
+    private async _getOrderBooks(orderId: string) {
         const bookOfOrders = await this.BookOfOrderDao.aggregate([
             { $match: { orderId } },
             { $lookup: { from: "books", localField: "bookId", foreignField: "_id", as: "joinBook" } },
@@ -238,36 +272,7 @@ export class OrderController extends CorpLock {
             e.amount /= 100;
             e.joinBook && (e.joinBook = e.joinBook[0]) && (e.joinBook.amount /= 100);
         });
-
-        // 关系人
-        const userIds = [order.creatorId, order.managerId, order.accounterId];
-        const userInfos = await this.UserRemote.getUserInfoList({ userIds });
-
-        // 关联订单
-        const parentIds = [orderId, order.parentOrderId];
-        const _orders = await this.OrderDao.query({
-            $or: [{ _id: { $in: parentIds } }, { parentOrderId: { $in: parentIds } }],
-        });
-
-        // View
-        return {
-            skuList: SkuJoineds.map((sku) => {
-                sku.pounds /= 1000;
-                sku.price /= 100;
-                return sku;
-            }),
-            bookOfOrderList: bookOfOrders,
-            //@ts-ignore
-            joinCreator: userInfos.find((u) => u.userId === order.creatorId),
-            //@ts-ignore
-            joinManager: userInfos.find((u) => u.userId === order.managerId),
-            //@ts-ignore
-            joinAccounter: userInfos.find((u) => u.userId === order.accounterId),
-            //@ts-ignore
-            joinChildOrder: _orders.filter((e) => e.parentOrderId === order._id),
-            //@ts-ignore
-            joinParentOrder: _orders.filter((e) => e._id === order.parentOrderId),
-        };
+        return bookOfOrders;
     }
 
     private getCode(corpId: string, type: ENUM_ORDER): Promise<string> {

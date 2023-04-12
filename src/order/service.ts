@@ -11,8 +11,8 @@ import { UserRemote } from "remote/user";
 export class OrderService {
     constructor(
         //
-        private readonly OrderDao: OrderDao,
-        private readonly UserRemote: UserRemote,
+        // private readonly OrderDao: OrderDao,
+        // private readonly UserRemote: UserRemote,
         private readonly BrandRemote: BrandRemote
     ) {}
 
@@ -33,31 +33,5 @@ export class OrderService {
                 o.joinContact = contacts.find((c) => c._id === o.contactId);
             });
         }
-
-        // 关系人
-        // if (option.joinCreator || option.joinManager || option.joinAccounter) {
-        //     const userIds = [
-        //         ...new Set(orders.map((e) => e.creatorId)),
-        //         ...new Set(orders.map((e) => e.managerId)),
-        //         ...new Set(orders.map((e) => e.accounterId)),
-        //     ];
-        //     const userInfos = await this.UserRemote.getUserInfoList({ userIds });
-        //     (orders as OrderJoined[]).forEach((o) => {
-        //         o.joinCreator = userInfos.find((u) => u.userId === o.creatorId);
-        //         o.joinManager = userInfos.find((u) => u.userId === o.managerId);
-        //         o.joinAccounter = userInfos.find((u) => u.userId === o.accounterId);
-        //     });
-        // }
-
-        // 关联订单
-        // const parentIds = [...new Set(orders.map((e) => e._id)), ...new Set(orders.map((e) => e.parentOrderId))];
-        // const _orders = await this.OrderDao.query({
-        //     $or: [{ _id: { $in: parentIds } }, { parentOrderId: { $in: parentIds } }],
-        // });
-
-        // (orders as OrderJoined[]).forEach((o) => {
-        //     o.joinChildOrder = _orders.filter((e) => e.parentOrderId === o._id);
-        //     o.joinParentOrder = _orders.filter((e) => e._id === o.parentOrderId);
-        // });
     }
 }

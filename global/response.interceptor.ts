@@ -21,6 +21,7 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor {
 
         const chain: string = (request.body.UserDTO || request.body.BrandDTO)?.chain || randomUUID();
         this.LogRemote.log(ENUM_LOG.TRACE, path, chain); // async
+        const start = Date.now();
 
         return next.handle().pipe(
             map((data) => {
@@ -29,7 +30,7 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor {
                     data: data ?? null,
                     message: "成功",
                 };
-                this.LogRemote.log(ENUM_LOG.ALL, path, chain); // async
+                this.LogRemote.log(ENUM_LOG.ALL, path, chain, { time: Date.now() - start }); // async
                 return response;
             })
         );

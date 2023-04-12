@@ -39,7 +39,7 @@ export class SkuController {
         const base = {
             corpId: BrandDTO.corp._id,
             orderIsDisabled: false,
-            isConfirmed: search.isConfirmed,
+            isConfirmed: search.isConfirmed ? true : { $in: [true, false] },
             type: { $in: dto.types },
             layout:
                 search.layout === ENUM_LAYOUT_CABINET.INDIVIDUAL
