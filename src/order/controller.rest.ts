@@ -21,29 +21,32 @@ import { BrandDTO } from "qqlx-sdk";
 
 import { TimeLog } from "global/time.decorate";
 import { BrandGuard, ENUM_BRAND_ROLE_ALL, ENUM_BRAND_ROLE_NORMAL } from "global/brand.guard";
-import { CorpLock } from "global/lock.corp";
-import { OrderDao } from "dao/order";
-import { SkuDao } from "dao/sku";
-import { BookOfOrderDao } from "dao/book";
 
+import { CorpLock } from "global/lock.corp";
 import { UserRemote } from "remote/user";
 import { MarketRemote } from "remote/market";
+
+import { SkuDao } from "dao/sku";
+import { OrderDao } from "dao/order";
+import { BookOfOrderDao } from "dao/book";
 import { OrderService } from "src/order/service";
 import { SkuService } from "src/sku/service";
 import { BookService } from "src/book/service";
 import { JoinService } from "src/join/service";
+import { ClueService } from "src/clue/service";
 
 @Controller(PATH_ORDER)
 @UseGuards(BrandGuard)
 export class OrderController extends CorpLock {
     constructor(
-        private readonly JoinService: JoinService,
         private readonly SkuService: SkuService,
         private readonly OrderService: OrderService,
+        private readonly JoinService: JoinService,
+        private readonly ClueService: ClueService,
         private readonly MarketRemote: MarketRemote,
         private readonly UserRemote: UserRemote,
-        private readonly BookService: BookService,
         //
+
         private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
         private readonly BookOfOrderDao: BookOfOrderDao
@@ -84,7 +87,8 @@ export class OrderController extends CorpLock {
         if (dto.skuList?.length > 0) await this.SkuService.createSku(dto.skuList, entity);
 
         // 更新
-        await this.JoinService.resetAmountOrder(BrandDTO.corp._id, entity._id);
+        const amountInfo = await this.JoinService.resetAmountOrder(BrandDTO.corp._id, entity._id);
+        this.ClueService.insertOrderCreation(BrandDTO, entity); //async
         return entity;
     }
 
@@ -165,6 +169,7 @@ export class OrderController extends CorpLock {
 
         // 重新关联金额
         await this.JoinService.resetAmountOrder(BrandDTO.corp._id, entity._id);
+        this.ClueService.insertOrderEdition(BrandDTO, entity); //async
         return entity;
     }
 

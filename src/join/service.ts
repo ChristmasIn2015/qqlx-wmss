@@ -28,20 +28,26 @@ export class JoinService extends CorpLock {
         await this.OrderDao.updateMany({ corpId, parentOrderId: orderId }, { contactId: order.contactId });
     }
 
-    resetAmountOrder(corpId: string, orderId: string) {
+    resetAmountOrder(
+        corpId: string,
+        orderId: string
+    ): Promise<{
+        amount: number;
+        amountBookOfOrder: number;
+        amountBookOfOrderRest: number;
+    }> {
         return new Promise((resolve, reject) => {
             const lock = this.getLock(corpId);
             lock.acquire("amount-book", async () => {
+                const updater = {
+                    amount: 0,
+                    amountBookOfOrder: 0,
+                    amountBookOfOrderRest: 0,
+                };
                 let errorMessage = null;
                 try {
                     const order: Order = await this.OrderDao.findOne(orderId);
                     if (!order) return;
-
-                    const updater = {
-                        amount: 0,
-                        amountBookOfOrder: 0,
-                        amountBookOfOrderRest: 0,
-                    };
 
                     // SKU
                     const skus = await this.SkuDao.query({ orderId });
@@ -64,7 +70,7 @@ export class JoinService extends CorpLock {
                 } catch (error) {
                     errorMessage = error.message;
                 } finally {
-                    errorMessage ? reject(errorMessage) : resolve(true);
+                    errorMessage ? reject(errorMessage) : resolve(updater);
                 }
             });
         });
