@@ -9,7 +9,7 @@ import { MongooseDao } from "qqlx-sdk";
 export class ContactAnalysis implements _ {
     @Prop({ default: "", required: true })
     corpId: string;
-    @Prop({ default: "", required: true })
+    @Prop({ default: "" })
     contactId: string;
 
     @Prop({
