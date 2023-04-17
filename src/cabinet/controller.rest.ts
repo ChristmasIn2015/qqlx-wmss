@@ -33,7 +33,7 @@ export class CabinetController {
         private readonly CabinetDao: CabinetDao,
         private readonly CabinetUnitDao: CabinetUnitDao
     ) {
-        this.init();
+        // this.init();
     }
 
     async init() {

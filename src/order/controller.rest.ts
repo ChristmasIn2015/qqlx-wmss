@@ -55,7 +55,7 @@ export class OrderController extends CorpLock {
         private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
-        this.init();
+        // this.init();
     }
 
     async init() {
