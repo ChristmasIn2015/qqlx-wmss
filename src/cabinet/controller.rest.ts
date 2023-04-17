@@ -15,6 +15,8 @@ import {
     deleteCabinetDto,
     deleteCabinetRes,
     RECOMAND_POUNDS_FORMULA,
+    Cabinet,
+    CabinetUnit,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -30,7 +32,25 @@ export class CabinetController {
         //
         private readonly CabinetDao: CabinetDao,
         private readonly CabinetUnitDao: CabinetUnitDao
-    ) {}
+    ) {
+        this.init();
+    }
+
+    async init() {
+        console.log("cabinet initing");
+        const all: Cabinet[] = await this.CabinetDao.query({ layout: ENUM_LAYOUT_CABINET.INDIVIDUAL });
+        let count = 0;
+        for (const cabinet of all) {
+            console.log(++count, all.length);
+            const units: CabinetUnit[] = await this.CabinetUnitDao.query({ cabinetId: cabinet._id });
+            let _count = 0;
+            for (const unit of units) {
+                console.log(++_count, units.length);
+                await this.cabinetUnitService.resetCabinetUnit(unit.corpId, unit.name, unit.norm);
+            }
+        }
+        console.log("cabinet init end");
+    }
 
     @Post()
     @SetMetadata("BrandRole", [ENUM_BRAND_ROLE.ROOT, ENUM_BRAND_ROLE.PURCHASE, ENUM_BRAND_ROLE.SALES, ENUM_BRAND_ROLE.WM])

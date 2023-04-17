@@ -16,6 +16,7 @@ import {
     getSkuByOrderDto,
     getSkuByOrderRes,
     BookOfOrder,
+    Order,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -44,6 +45,7 @@ export class OrderController extends CorpLock {
         private readonly OrderService: OrderService,
         private readonly JoinService: JoinService,
         private readonly ClueService: ClueService,
+        private readonly AnalysisService: AnalysisService,
         private readonly MarketRemote: MarketRemote,
         private readonly UserRemote: UserRemote,
         //
@@ -53,6 +55,18 @@ export class OrderController extends CorpLock {
         private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
+        this.init();
+    }
+
+    async init() {
+        const all: Order[] = await this.OrderDao.query({ contactId: { $ne: "" } });
+        const contactIds = [...new Set([...all.filter((e) => e.contactId).map((e) => e.contactId)])];
+        let count = 0;
+        for (const contactId of contactIds) {
+            console.log(++count, contactIds.length);
+            await this.AnalysisService.updateContactAnalysis(all.find((e) => e.contactId === contactId).corpId, contactId);
+        }
+        console.log("order init end");
     }
 
     @Post()
