@@ -84,22 +84,9 @@ export class BookController extends CorpLock {
             groupKey: "amount",
         };
 
-        // 查询
-        // if (dto.isAmountBookOfSelfRest) {
-        //     const books = await this.BookDao.aggregate([
-        //         { $project: { subtract: { $subtract: ["$amountBookOfOrder", "$amountBookOfSelf"] } } },
-        //         { $match: { subtract: { $ne: 0 } } },
-        //     ]);
-        //     query["_id"] = { $in: books.map((e) => e._id) };
-        // }
-
         // 正常查询
         const page = await this.BookDao.page(query, dto.page, option);
-        page.list = await this.bookService.getBookJoined(
-            page.list.map((e) => e._id),
-            option.sortKey,
-            option.sortValue
-        );
+        page.list = await this.bookService.getBookJoined(page.list);
 
         // 金额换算
         page.list.forEach((book: BookJoined) => {

@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { Order, Book } from "qqlx-core";
 
 import { CorpLock } from "global/lock.corp";
+import { AnalysisService } from "src/analysis/service";
 import { SkuDao } from "dao/sku";
 import { OrderDao } from "dao/order";
 import { BookDao, BookOfOrderDao, BookOfSelfDao } from "dao/book";
@@ -10,6 +11,8 @@ import { BookDao, BookOfOrderDao, BookOfSelfDao } from "dao/book";
 @Injectable()
 export class JoinService extends CorpLock {
     constructor(
+        private readonly AnalysisService: AnalysisService,
+        //
         private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
         private readonly BookDao: BookDao,
@@ -26,6 +29,9 @@ export class JoinService extends CorpLock {
         await this.SkuDao.updateMany({ orderId }, { orderContactId: order.contactId });
         await this.BookOfOrderDao.updateMany({ orderId }, { orderContactId: order.contactId });
         await this.OrderDao.updateMany({ corpId, parentOrderId: orderId }, { contactId: order.contactId });
+
+        // 补充客户分析
+        await this.AnalysisService.updateContactAnalysis(order.corpId, order.contactId);
     }
 
     resetAmountOrder(
@@ -67,6 +73,9 @@ export class JoinService extends CorpLock {
                     updater.amountBookOfOrder /= 100;
                     updater.amountBookOfOrderRest /= 100;
                     await this.OrderDao.updateOne(orderId, updater);
+
+                    // 补充客户分析
+                    await this.AnalysisService.updateContactAnalysis(order.corpId, order.contactId);
                 } catch (error) {
                     errorMessage = error.message;
                 } finally {

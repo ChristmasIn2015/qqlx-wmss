@@ -34,6 +34,7 @@ import { SkuService } from "src/sku/service";
 import { BookService } from "src/book/service";
 import { JoinService } from "src/join/service";
 import { ClueService } from "src/clue/service";
+import { AnalysisService } from "src/analysis/service";
 
 @Controller(PATH_ORDER)
 @UseGuards(BrandGuard)

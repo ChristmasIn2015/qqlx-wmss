@@ -38,23 +38,18 @@ const recommandMap = new Map<string, { name: string; norm: string }[]>();
     recommandMap.set("冷轧板", list);
 }
 {
-    const list = [];
-    for (let n of ["螺母", "垫片"]) {
-        for (let h of ["-"]) {
-            list.push({ name: n, norm: h + "" });
-        }
-    }
-    recommandMap.set("配件", list);
+    recommandMap.set("费用", [
+        { name: "运费", norm: "-" },
+        { name: "加工费", norm: "-" },
+    ]);
 }
-{
-    const list = [];
-    for (let n of ["运费", "加工费"]) {
-        for (let h of ["-"]) {
-            list.push({ name: n, norm: h + "" });
-        }
-    }
-    recommandMap.set("费用", list);
-}
+recommandMap.set("焊管", [{ name: "焊管", norm: "273*20" }]);
+recommandMap.set("圆管", [{ name: "圆管", norm: "273*20" }]);
+recommandMap.set("方管", [{ name: "方管", norm: "200*10" }]);
+recommandMap.set("矩形方管", [{ name: "矩形方管", norm: "200*100*10" }]);
+recommandMap.set("等边角钢", [{ name: "等边角钢", norm: "50*5" }]);
+recommandMap.set("不等边角钢", [{ name: "不等边角钢", norm: "60*40*5" }]);
+recommandMap.set("H型钢", [{ name: "H型钢", norm: "400*150*8*13" }]);
 
 @Injectable()
 export class CabinetUnitService extends CorpLock {
@@ -67,7 +62,7 @@ export class CabinetUnitService extends CorpLock {
     }
 
     async createCabinetUnitAuto(entity: Cabinet, corpId: string) {
-        const recommandUnits = this.getRecommandUnit(entity.name);
+        const recommandUnits = recommandMap.get(entity.name);
         if (recommandUnits && recommandUnits.length > 0) {
             const units = [];
             for (let rec of recommandUnits) {
@@ -108,11 +103,6 @@ export class CabinetUnitService extends CorpLock {
         schema.price = Number(schema.price) || 0;
         const created = await this.CabinetUnitDao.create(schema);
         return created;
-    }
-
-    getRecommandUnit(name: string): { name: string; norm: string }[] {
-        const list = recommandMap.get(name);
-        return list || [];
     }
 
     resetCabinetUnit(corpId: string, name: string, norm: string) {

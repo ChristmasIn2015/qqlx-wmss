@@ -14,6 +14,7 @@ import {
     patchCabinetRes,
     deleteCabinetDto,
     deleteCabinetRes,
+    RECOMAND_POUNDS_FORMULA,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -62,43 +63,15 @@ export class CabinetController {
 
         // 如果没有货架，则创建默认货架
         if (results.length === 0) {
-            {
+            const cabinets = [];
+            for (const recomand of RECOMAND_POUNDS_FORMULA) {
                 const schema = this.CabinetDao.getSchema();
                 schema.corpId = BrandDTO.corp._id;
-                schema.name = "配件";
-                schema.formula = ENUM_POUNDS_FORMULA.NONE;
-                schema.layout = ENUM_LAYOUT_CABINET.SUMMARY;
-                const cabinet = await this.CabinetDao.create(schema);
-                await this.cabinetUnitService.createCabinetUnitAuto(cabinet, BrandDTO.corp._id);
+                const cabinet = await this.CabinetDao.create({ ...schema, ...recomand });
+                cabinets.push(cabinet);
             }
-            {
-                const schema = this.CabinetDao.getSchema();
-                schema.corpId = BrandDTO.corp._id;
-                schema.name = "费用";
-                schema.unit = "项";
-                schema.formula = ENUM_POUNDS_FORMULA.NONE;
-                schema.layout = ENUM_LAYOUT_CABINET.SUMMARY;
-                const cabinet = await this.CabinetDao.create(schema);
-                await this.cabinetUnitService.createCabinetUnitAuto(cabinet, BrandDTO.corp._id);
-            }
-            {
-                const schema = this.CabinetDao.getSchema();
-                schema.corpId = BrandDTO.corp._id;
-                schema.name = "冷轧板";
-                schema.unit = "张";
-                schema.formula = ENUM_POUNDS_FORMULA.STEEL_PLATE;
-                schema.layout = ENUM_LAYOUT_CABINET.SUMMARY;
-                const cabinet = await this.CabinetDao.create(schema);
-                await this.cabinetUnitService.createCabinetUnitAuto(cabinet, BrandDTO.corp._id);
-            }
-            {
-                const schema = this.CabinetDao.getSchema();
-                schema.corpId = BrandDTO.corp._id;
-                schema.name = "冷轧卷";
-                schema.unit = "个";
-                schema.formula = ENUM_POUNDS_FORMULA.NONE;
-                schema.layout = ENUM_LAYOUT_CABINET.INDIVIDUAL;
-                const cabinet = await this.CabinetDao.create(schema);
+
+            for (const cabinet of cabinets) {
                 await this.cabinetUnitService.createCabinetUnitAuto(cabinet, BrandDTO.corp._id);
             }
         }

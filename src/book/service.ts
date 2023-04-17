@@ -16,9 +16,7 @@ export class BookService {
         private readonly BookOfSelfDao: BookOfSelfDao
     ) {}
 
-    async getBookJoined(bookIds: string[], sortKey?: string, sortValue?: MongodbSort): Promise<BookJoined[]> {
-        const books = await this.BookDao.query({ _id: { $in: bookIds } }, { sortKey, sortValue });
-
+    async getBookJoined(books: Book[]): Promise<BookJoined[]> {
         const order_ofs = await this.getBookOfOrder(books.map((e) => e._id));
         const self_ofs = await this.getBookOfSelf(books);
 

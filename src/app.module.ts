@@ -6,6 +6,7 @@ import { Cabinet, CabinetSchema, CabinetDao, CabinetUnit, CabinetUnitSchema, Cab
 import { Clue, ClueSchema, ClueDao } from "dao/clue";
 import { Order, OrderSchema, OrderDao } from "dao/order";
 import { Sku, SkuSchema, SkuDao } from "dao/sku";
+import { ContactAnalysis, ContactAnalysisSchema, ContactAnalysisDao } from "dao/analysis";
 import { LogRemote } from "remote/log";
 import { UserRemote } from "remote/user";
 import { BrandRemote } from "remote/brand";
@@ -16,6 +17,7 @@ import { BookService } from "src/book/service";
 import { SkuService } from "src/sku/service";
 import { OrderService } from "src/order/service";
 import { CabinetUnitService } from "src/cabinetUnit/service";
+import { AnalysisService } from "src/analysis/service";
 
 import { AnalysisController } from "src/analysis/controller.rest";
 import { ClueController } from "src/clue/controller.rest";
@@ -37,6 +39,7 @@ import { SkuController } from "src/sku/controller.rest";
             { name: CabinetUnit.name, schema: CabinetUnitSchema },
             { name: Order.name, schema: OrderSchema },
             { name: Sku.name, schema: SkuSchema },
+            { name: ContactAnalysis.name, schema: ContactAnalysisSchema },
         ]),
     ],
     controllers: [
@@ -58,6 +61,7 @@ import { SkuController } from "src/sku/controller.rest";
         ClueDao,
         OrderDao,
         SkuDao,
+        ContactAnalysisDao,
         LogRemote,
         UserRemote,
         BrandRemote,
@@ -68,6 +72,7 @@ import { SkuController } from "src/sku/controller.rest";
         CabinetUnitService,
         SkuService,
         OrderService,
+        AnalysisService,
     ],
 })
 export class AppModule {}

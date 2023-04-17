@@ -69,7 +69,16 @@ export class Sku implements _ {
     layout: ENUM_LAYOUT_CABINET;
     @Prop({
         default: ENUM_POUNDS_FORMULA.NONE,
-        enum: [ENUM_POUNDS_FORMULA.NONE, ENUM_POUNDS_FORMULA.STEEL_PLATE],
+        enum: [
+            ENUM_POUNDS_FORMULA.NONE,
+            ENUM_POUNDS_FORMULA.TS_PLATE,
+            ENUM_POUNDS_FORMULA.TS_WFGG,
+            ENUM_POUNDS_FORMULA.TS_FG,
+            ENUM_POUNDS_FORMULA.TS_JXFG,
+            ENUM_POUNDS_FORMULA.TS_DBJG,
+            ENUM_POUNDS_FORMULA.TS_BDBJG,
+            ENUM_POUNDS_FORMULA.TS_HXG,
+        ],
     })
     formula: ENUM_POUNDS_FORMULA;
 
