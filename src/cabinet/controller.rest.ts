@@ -84,7 +84,7 @@ export class CabinetController {
         // 如果没有货架，则创建默认货架
         if (results.length === 0) {
             const cabinets = [];
-            for (const recomand of RECOMAND_POUNDS_FORMULA) {
+            for (const recomand of RECOMAND_POUNDS_FORMULA.filter((e) => ["冷轧板", "冷轧卷", "费用"].includes(e.name))) {
                 const schema = this.CabinetDao.getSchema();
                 schema.corpId = BrandDTO.corp._id;
                 const cabinet = await this.CabinetDao.create({ ...schema, ...recomand });

@@ -56,7 +56,14 @@ export class BookController extends CorpLock {
             entitys.push(entity);
         }
 
-        return entitys;
+        return entitys.map((e) => {
+            e.amount /= 100;
+            e.amountBookOfOrder /= 100;
+            e.amountBookOfOrderRest /= 100;
+            e.amountBookOfSelf /= 100;
+            e.amountBookOfSelfRest /= 100;
+            return e;
+        });
     }
 
     @Post("/get")
