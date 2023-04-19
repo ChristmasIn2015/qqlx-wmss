@@ -17,6 +17,7 @@ import {
     getSkuByOrderRes,
     BookOfOrder,
     Order,
+    ENUM_BRAND_ROLE,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -26,6 +27,7 @@ import { BrandGuard, ENUM_BRAND_ROLE_ALL, ENUM_BRAND_ROLE_NORMAL } from "global/
 import { CorpLock } from "global/lock.corp";
 import { UserRemote } from "remote/user";
 import { MarketRemote } from "remote/market";
+import { BrandRemote } from "remote/brand";
 
 import { SkuDao } from "dao/sku";
 import { OrderDao } from "dao/order";
@@ -47,6 +49,7 @@ export class OrderController extends CorpLock {
         private readonly ClueService: ClueService,
         private readonly AnalysisService: AnalysisService,
         private readonly MarketRemote: MarketRemote,
+        private readonly BrandRemote: BrandRemote,
         private readonly UserRemote: UserRemote,
         //
 
@@ -73,7 +76,19 @@ export class OrderController extends CorpLock {
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_NORMAL)
     async postOrder(@Body("dto") dto: postOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<postOrderRes> {
         const schema = dto.schema;
+
+        // *剩余有效期必须足够
         await this.MarketRemote.isCorpEmpower({ corpId: BrandDTO.corp._id });
+
+        // *权限必须足够
+        const valid = { userId: BrandDTO.userInfo?.userId };
+        if (schema.type === ENUM_ORDER.SALES) {
+            await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.SALES });
+        } else if (schema.type === ENUM_ORDER.PURCHASE) {
+            await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.PURCHASE });
+        } else if ([ENUM_ORDER.GETIN, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL, ENUM_ORDER.PROCESS].includes(schema.type)) {
+            await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.WM });
+        }
 
         // 最多创建一项关联订单
         if (schema.parentOrderId) {

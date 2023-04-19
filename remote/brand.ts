@@ -3,7 +3,17 @@ import { ClientProxy, ClientProxyFactory, Transport } from "@nestjs/microservice
 
 import { Response } from "qqlx-cdk";
 import { Log, ENUM_CORP, Corp, Contact } from "qqlx-core";
-import { HOST_MID_BRAND, PORT_MID_BRAND, getCorpDto, getCorpRes, getContactDto, getContactRes, chargeRpcResponse } from "qqlx-sdk";
+import {
+    HOST_MID_BRAND,
+    PORT_MID_BRAND,
+    getCorpDto,
+    getCorpRes,
+    getMarketRoleDto,
+    getMarketRoleRes,
+    getContactDto,
+    getContactRes,
+    chargeRpcResponse,
+} from "qqlx-sdk";
 
 @Injectable()
 export class BrandRemote {
@@ -20,6 +30,12 @@ export class BrandRemote {
         const res: Response<Corp> = await this.client.send("getCorp", dto).toPromise(); // event async
         const info = chargeRpcResponse(res);
         return info;
+    }
+
+    async getMarketRole(dto: getMarketRoleDto): Promise<null> {
+        const res: Response<getMarketRoleRes> = await this.client.send("getMarketRole", dto).toPromise(); // event async
+        const info = chargeRpcResponse(res);
+        return null;
     }
 
     async getContact(dto: getContactDto): Promise<Contact[]> {
