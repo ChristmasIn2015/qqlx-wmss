@@ -81,7 +81,7 @@ export class OrderController extends CorpLock {
         await this.MarketRemote.isCorpEmpower({ corpId: BrandDTO.corp._id });
 
         // *权限必须足够
-        const valid = { userId: BrandDTO.userInfo?.userId };
+        const valid = { userId: BrandDTO.userInfo?.userId, corpId: BrandDTO.corp._id };
         if (schema.type === ENUM_ORDER.SALES) {
             await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.SALES });
         } else if (schema.type === ENUM_ORDER.PURCHASE) {
