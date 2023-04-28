@@ -32,11 +32,7 @@ export class CabinetController {
         //
         private readonly CabinetDao: CabinetDao,
         private readonly CabinetUnitDao: CabinetUnitDao
-    ) {
-        // this.init();
-    }
-
-    async init() {}
+    ) {}
 
     @Post()
     @SetMetadata("BrandRole", [ENUM_BRAND_ROLE.ROOT, ENUM_BRAND_ROLE.PURCHASE, ENUM_BRAND_ROLE.SALES, ENUM_BRAND_ROLE.WM])

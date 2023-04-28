@@ -29,14 +29,7 @@ export class SkuController {
         private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
         private readonly SkuService: SkuService
-    ) {
-        this.init();
-    }
-
-    async init() {
-        await this.SkuDao.updateMany({}, { areaId: "" });
-        console.log("Sku init area end");
-    }
+    ) {}
 
     @Post("/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)

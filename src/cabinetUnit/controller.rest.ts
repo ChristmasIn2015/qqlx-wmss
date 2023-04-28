@@ -31,13 +31,7 @@ export class CabinetUnitController {
         //
         private readonly CabinetUnitDao: CabinetUnitDao
     ) {
-        this.init();
-        // this.init2();
-    }
-
-    async init() {
-        await this.CabinetUnitDao.updateMany({}, { areaId: "" });
-        console.log("CabinetUnit init area end");
+        this.init2();
     }
 
     async init2() {
@@ -45,7 +39,7 @@ export class CabinetUnitController {
         let count = 0;
         for (const unit of all) {
             await this.cabinetUnitService.resetCabinetUnit(unit.corpId, unit.name, unit.norm, unit.areaId);
-            console.log(++count, " / ", all.length);
+            console.log(++count, " / ", all.length, "reset unit");
         }
     }
 
