@@ -31,13 +31,13 @@ export class CabinetUnitController {
         //
         private readonly CabinetUnitDao: CabinetUnitDao
     ) {
-        // this.init();
+        this.init();
         // this.init2();
     }
 
     async init() {
         await this.CabinetUnitDao.updateMany({}, { areaId: "" });
-        console.log("CabinetUnit init end");
+        console.log("CabinetUnit init area end");
     }
 
     async init2() {

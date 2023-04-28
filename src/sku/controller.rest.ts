@@ -30,12 +30,12 @@ export class SkuController {
         private readonly OrderDao: OrderDao,
         private readonly SkuService: SkuService
     ) {
-        // this.init();
+        this.init();
     }
 
     async init() {
         await this.SkuDao.updateMany({}, { areaId: "" });
-        console.log("Sku init end");
+        console.log("Sku init area end");
     }
 
     @Post("/get")
