@@ -68,8 +68,6 @@ export class JoinService extends CorpLock {
                         this.BookOfOrderDao.aggregate([{ $match: match4 }, { $group: { _id: "result", total: { $sum: "$amount" } } }]),
                     ]);
 
-                    console.log(aggre34);
-
                     const aggre3 = aggre34[0];
                     updater.amountBookOfOrder = aggre3[0]?.total ?? 0;
                     updater.amountBookOfOrderRest = updater.amount - updater.amountBookOfOrder;

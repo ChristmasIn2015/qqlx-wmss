@@ -37,6 +37,21 @@ export class BookController extends CorpLock {
         private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
+        this.init();
+    }
+
+    private async init() {
+        const bos = await this.BookOfOrderDao.query({});
+        let count = 0;
+        for (const bookOfOrder of bos) {
+            const book = await this.BookDao.findOne(bookOfOrder.bookId);
+            if (!book) continue;
+
+            const updater = { bookType: book.type, bookDirection: book.direction };
+            await this.BookOfOrderDao.updateOne(bookOfOrder._id, updater);
+            count++;
+            console.log(count, updater, bos.length);
+        }
     }
 
     @Post()

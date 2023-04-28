@@ -58,14 +58,12 @@ export class OrderController extends CorpLock {
         private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
-        this.init();
     }
 
     async init() {
         const all: Order[] = await this.OrderDao.query({
             type: { $in: [ENUM_ORDER.SALES, ENUM_ORDER.PURCHASE] },
             isDisabled: false,
-            contactId: "60b4eb954b7a2913d0e7523d",
         });
         let count = 0;
         for (const order of all) {
