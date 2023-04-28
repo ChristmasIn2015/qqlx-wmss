@@ -58,24 +58,23 @@ export class JoinService extends CorpLock {
                         order.type === ENUM_ORDER.SALES
                             ? { orderId, bookType: ENUM_BOOK_TYPE.YSZK, bookDirection: ENUM_BOOK_DIRECTION.DAI }
                             : { orderId, bookType: ENUM_BOOK_TYPE.YFZK, bookDirection: ENUM_BOOK_DIRECTION.JIE };
-                    const aggre3 = await this.BookOfOrderDao.aggregate([
-                        { $match: match3 },
-                        { $group: { _id: "result", total: { $sum: "$amount" } } },
-                        //
-                    ]);
-                    updater.amountBookOfOrder = aggre3[0]?.total ?? 0;
-                    updater.amountBookOfOrderRest = updater.amount - updater.amountBookOfOrder;
-
-                    // 发票
                     const match4 =
                         order.type === ENUM_ORDER.SALES
                             ? { orderId, bookType: ENUM_BOOK_TYPE.YSZK_VAT, bookDirection: ENUM_BOOK_DIRECTION.JIE }
                             : { orderId, bookType: ENUM_BOOK_TYPE.YFZK_VAT, bookDirection: ENUM_BOOK_DIRECTION.DAI };
-                    const aggre4 = await this.BookOfOrderDao.aggregate([
-                        { $match: match4 },
-                        { $group: { _id: "result", total: { $sum: "$amount" } } },
-                        //
+
+                    const aggre34 = await Promise.all([
+                        this.BookOfOrderDao.aggregate([{ $match: match3 }, { $group: { _id: "result", total: { $sum: "$amount" } } }]),
+                        this.BookOfOrderDao.aggregate([{ $match: match4 }, { $group: { _id: "result", total: { $sum: "$amount" } } }]),
                     ]);
+
+                    console.log(aggre34);
+
+                    const aggre3 = aggre34[0];
+                    updater.amountBookOfOrder = aggre3[0]?.total ?? 0;
+                    updater.amountBookOfOrderRest = updater.amount - updater.amountBookOfOrder;
+
+                    const aggre4 = aggre34[1];
                     updater.amountBookOfOrderVAT = aggre4[0]?.total ?? 0;
                     updater.amountBookOfOrderVATRest = updater.amount - updater.amountBookOfOrderVAT;
 
