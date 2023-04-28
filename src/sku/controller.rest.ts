@@ -17,7 +17,8 @@ import {
 import { BrandDTO } from "qqlx-sdk";
 
 import { BrandGuard, ENUM_BRAND_ROLE_ALL, ENUM_BRAND_ROLE_NORMAL } from "global/brand.guard";
-import { SkuDao } from "../../dao/sku";
+import { SkuDao } from "dao/sku";
+import { OrderDao } from "dao/order";
 import { SkuService } from "./service";
 
 @Controller(PATH_SKU)
@@ -26,8 +27,16 @@ export class SkuController {
     constructor(
         //
         private readonly SkuDao: SkuDao,
+        private readonly OrderDao: OrderDao,
         private readonly SkuService: SkuService
-    ) {}
+    ) {
+        // this.init();
+    }
+
+    async init() {
+        await this.SkuDao.updateMany({}, { areaId: "" });
+        console.log("Sku init end");
+    }
 
     @Post("/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
@@ -55,6 +64,7 @@ export class SkuController {
             ...(search.keyFeat && { keyFeat: new RegExp(search.keyFeat) }),
             ...(search.keyCode && { keyCode: new RegExp(search.keyCode) }),
             ...(search.orderContactId && { orderContactId: search.orderContactId }),
+            ...(search.areaId && { areaId: search.areaId || "" }),
         };
 
         // 排序
@@ -78,6 +88,36 @@ export class SkuController {
             sku.price /= 100;
         });
         return page;
+    }
+
+    @Post("/rela-order/get")
+    async getSkuRelaOrder(@Body("dto") dto: { deductionSkuId: string }, @Body("BrandDTO") BrandDTO: BrandDTO) {
+        // 领料
+        const skus = await this.SkuDao.query({
+            corpId: BrandDTO.corp?._id,
+            type: ENUM_ORDER.MATERIAL,
+            deductionSkuId: dto.deductionSkuId,
+        });
+
+        // 加工
+        const orders_process = await this.OrderDao.query({
+            corpId: BrandDTO.corp?._id,
+            type: ENUM_ORDER.PROCESS,
+            parentOrderId: { $in: [...new Set(skus.filter((e) => e.orderId).map((e) => e.orderId))] },
+        });
+        const skus_process = await this.SkuDao.query({
+            corpId: BrandDTO.corp?._id,
+            type: ENUM_ORDER.PROCESS,
+            orderId: { $in: orders_process.map((e) => e._id) },
+        });
+
+        // end
+        const result = await this.SkuService.getSkuJoined([...skus.map((e) => e._id), ...skus_process.map((e) => e._id)]);
+        result.forEach((e) => {
+            e.pounds /= 1000;
+            e.poundsFinal /= 1000;
+        });
+        return result;
     }
 
     @Patch()

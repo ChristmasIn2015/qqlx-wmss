@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ClientProxy, ClientProxyFactory, Transport } from "@nestjs/microservices";
 
 import { Response } from "qqlx-cdk";
-import { Log, ENUM_CORP, Corp, Contact } from "qqlx-core";
+import { Log, ENUM_CORP, Corp, Contact, AreaJoined } from "qqlx-core";
 import {
     HOST_MID_BRAND,
     PORT_MID_BRAND,
@@ -13,6 +13,8 @@ import {
     getContactDto,
     getContactRes,
     chargeRpcResponse,
+    getAreaDto,
+    getAreaRes,
 } from "qqlx-sdk";
 
 @Injectable()
@@ -40,6 +42,12 @@ export class BrandRemote {
 
     async getContact(dto: getContactDto): Promise<Contact[]> {
         const res: getContactRes = await this.client.send("getContact", dto).toPromise(); // event async
+        const info = chargeRpcResponse(res);
+        return info;
+    }
+
+    async getArea(dto: getAreaDto): Promise<AreaJoined[]> {
+        const res: getAreaRes = await this.client.send("getArea", dto).toPromise(); // event async
         const info = chargeRpcResponse(res);
         return info;
     }

@@ -4,12 +4,14 @@ import { trimObject, MongodbSort, Calculation } from "qqlx-cdk";
 import { ENUM_ORDER, ENUM_LAYOUT_CABINET, Sku, SkuJoined, Order, OrderJoined } from "qqlx-core";
 
 import { CorpLock } from "global/lock.corp";
+import { BrandRemote } from "remote/brand";
 import { SkuDao } from "dao/sku";
 import { CabinetUnitService } from "src/cabinetUnit/service";
 
 @Injectable()
 export class SkuService extends CorpLock {
     constructor(
+        private readonly BrandRemote: BrandRemote,
         //
         private readonly SkuDao: SkuDao,
         private readonly CabinetUnitService: CabinetUnitService
@@ -81,16 +83,19 @@ export class SkuService extends CorpLock {
         const query: any = [
             { $match: { _id: { $in: ids } } },
             { $sort: sort },
-            // { $lookup: { from: "warehouses", localField: "keyHouseId", foreignField: "_id", as: "joinWarehouse" } },
             { $lookup: { from: "orders", localField: "orderId", foreignField: "_id", as: "joinOrder" } },
             { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinOrderContact" } },
         ];
         const skus: SkuJoined[] = await this.SkuDao.aggregate(query);
 
-        skus.forEach((rela) => {
-            rela.joinOrder && (rela.joinOrder = rela.joinOrder[0]);
-            rela.joinOrderContact && (rela.joinOrderContact = rela.joinOrderContact[0]);
-        });
+        if (skus.length > 0) {
+            const areas = await this.BrandRemote.getArea({ corpId: skus[0]?.corpId });
+            skus.forEach((rela) => {
+                rela.joinArea = areas.find((e) => e._id === rela.areaId);
+                rela.joinOrder && (rela.joinOrder = rela.joinOrder[0]);
+                rela.joinOrderContact && (rela.joinOrderContact = rela.joinOrderContact[0]);
+            });
+        }
 
         return skus;
     }
@@ -122,12 +127,12 @@ export class SkuService extends CorpLock {
 
             if ([ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL].includes(exist.type)) {
                 // 计算发货、领料后的库存
-                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm);
+                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm, exist.areaId);
 
                 // 发货、领料有可能需要从入库库存中扣除本次消耗
                 if (exist.deductionSkuId) {
                     const deductionSku = await this.resetDeductionSku(exist);
-                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm);
+                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm, deductionSku.areaId);
                 }
             }
         }
@@ -139,12 +144,12 @@ export class SkuService extends CorpLock {
 
             if ([ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL].includes(exist.type)) {
                 // 计算发货、领料后的库存
-                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm);
+                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm, exist.areaId);
 
                 // 发货、领料有可能需要从入库库存中扣除本次消耗
                 if (exist.deductionSkuId) {
                     const deductionSku = await this.resetDeductionSku(exist);
-                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm);
+                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm, deductionSku.areaId);
                 }
             }
         }

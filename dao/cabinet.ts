@@ -83,17 +83,19 @@ export class CabinetUnit implements _CabinetUnit {
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     price: number;
+    @Prop({ default: "" })
+    areaId: string;
 
-    @Prop({
-        default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
-    })
-    poundsFinal: number;
     @Prop({
         default: 0,
         set: (value) => parseInt((Number(value) || 0).toString()),
     })
     countFinal: number;
+    @Prop({
+        default: 0,
+        set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
+    })
+    poundsFinal: number;
 
     @Prop({ required: true })
     _id: string;

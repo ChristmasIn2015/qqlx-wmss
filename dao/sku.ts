@@ -93,6 +93,8 @@ export class Sku implements _ {
     corpId: string;
     @Prop({ default: "" })
     warehouseId: string;
+    @Prop({ default: "" })
+    areaId: string;
 
     @Prop({ default: "", required: true })
     orderId: string;

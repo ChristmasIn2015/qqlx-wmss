@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { MongodbSort } from "qqlx-cdk";
-import { Clue, ENUM_PROJECT, Order } from "qqlx-core";
+import { Clue, ENUM_PROJECT, Order, MAP_ENUM_ORDER } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
 import { ClueDao } from "dao/clue";
@@ -27,7 +27,7 @@ export class ClueService {
         const schema: Clue = this.ClueDao.getSchema();
         schema.corpId = BrandDTO.corp?._id;
         schema.scope = ENUM_PROJECT.KDBGS;
-        schema.content = `${BrandDTO.userInfo?.nickname}: 创建了销售单 ${order.code}`;
+        schema.content = `${BrandDTO.userInfo?.nickname}: 创建了${MAP_ENUM_ORDER.get(order.type)?.text} ${order.code}`;
         schema.content += `，客户为 ${contact?.name || "客户异常"}`;
         schema.content += `，金额 ${(order.amount / 100).toFixed(2)} 元`;
         await this.ClueDao.create(schema);
@@ -43,7 +43,7 @@ export class ClueService {
         const schema: Clue = this.ClueDao.getSchema();
         schema.corpId = BrandDTO.corp?._id;
         schema.scope = ENUM_PROJECT.KDBGS;
-        schema.content = `${BrandDTO.userInfo?.nickname}: 修改了销售单 ${order.code}`;
+        schema.content = `${BrandDTO.userInfo?.nickname}: 修改了${MAP_ENUM_ORDER.get(order.type)?.text} ${order.code}`;
         schema.content += `，客户为 ${contact?.name || "客户异常"}`;
         schema.content += `，修改后金额为 ${(order.amount / 100).toFixed(2)} 元`;
         await this.ClueDao.create(schema);
@@ -59,7 +59,7 @@ export class ClueService {
         const schema: Clue = this.ClueDao.getSchema();
         schema.corpId = BrandDTO.corp?._id;
         schema.scope = ENUM_PROJECT.KDBGS;
-        schema.content = `${BrandDTO.userInfo?.nickname}: 打印了销售单 ${order.code}`;
+        schema.content = `${BrandDTO.userInfo?.nickname}: 打印了${MAP_ENUM_ORDER.get(order.type)?.text} ${order.code}`;
         schema.content += `，客户为 ${contact?.name || "客户异常"}`;
         schema.content += `，金额 ${(order.amount / 100).toFixed(2)} 元`;
         await this.ClueDao.create(schema);
