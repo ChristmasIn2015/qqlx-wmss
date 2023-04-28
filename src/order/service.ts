@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 
 import { MongodbSort } from "qqlx-cdk";
-import { Contact, ENUM_ORDER, Order, OrderJoined, ENUM_BRAND_ROLE } from "qqlx-core";
+import { Contact, ENUM_ORDER, Order, OrderJoined, ENUM_BRAND_ROLE, Sku } from "qqlx-core";
 
 import { OrderDao } from "dao/order";
+import { SkuService } from "src/sku/service";
 import { BrandRemote } from "remote/brand";
 import { UserRemote } from "remote/user";
 import { MarketRemote } from "remote/market";
@@ -13,19 +14,30 @@ export class OrderService {
     constructor(
         //
         private readonly OrderDao: OrderDao,
+        private readonly SkuService: SkuService,
         // private readonly UserRemote: UserRemote,
         private readonly BrandRemote: BrandRemote,
         private readonly MarketRemote: MarketRemote
     ) {}
 
-    async getOrderJoined(exits: Order[]): Promise<OrderJoined[]> {
+    async setOrderJoined(exits: Order[], option?: { corpId: string; joinSku?: boolean }) {
         const contactIds = [...new Set(exits.map((e) => e.contactId))];
         const contacts = await this.BrandRemote.getContact({ contactIds });
 
-        return (exits as OrderJoined[]).map((o) => {
-            o.joinContact = contacts.find((c) => c._id === o.contactId);
-            return o;
-        });
+        const skus: Sku[] = [];
+        if (option?.joinSku) {
+            const calcu = await this.SkuService.getSkuCalculation({
+                corpId: option?.corpId,
+                orderId: { $in: exits.map((e) => e._id) },
+            });
+            skus.push(...calcu.list);
+        }
+
+        for (const order of exits) {
+            const _order = order as OrderJoined;
+            _order.joinContact = contacts.find((c) => c._id === _order.contactId);
+            _order.joinSku = skus.filter((e) => e.orderId === _order._id);
+        }
     }
 
     async chargeOrder(

@@ -131,15 +131,20 @@ export class OrderController extends CorpLock {
 
         // 查询（并匹配用户信息）
         const page = await this.OrderDao.page(query, dto.page, option);
-        page.list = await this.OrderService.getOrderJoined(page.list);
+        await this.OrderService.setOrderJoined(page.list, { corpId: BrandDTO.corp?._id, joinSku: dto.joinSku });
 
         // View
-        page.list.forEach((order) => {
+        page.list.forEach((order: OrderJoined) => {
             order.amount /= 100;
             order.amountBookOfOrder /= 100;
             order.amountBookOfOrderRest /= 100;
             order.amountBookOfOrderVAT /= 100;
             order.amountBookOfOrderVATRest /= 100;
+            order.joinSku.map((sku) => {
+                sku.pounds /= 1000;
+                sku.price /= 100;
+                return sku;
+            });
         });
         return page as PageRes<OrderJoined>;
     }

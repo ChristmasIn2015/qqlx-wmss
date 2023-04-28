@@ -95,32 +95,6 @@ export class SkuService extends CorpLock {
         return skus;
     }
 
-    private async getSkuMatched(match: Object, sortKey: string = "timeCreate", sortValue: MongodbSort = MongodbSort.DES): Promise<SkuJoined[]> {
-        const sort = {};
-        sort[sortKey] = sortValue;
-
-        const query: any = [
-            { $match: match },
-            { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinOrderContact" } },
-            //
-        ];
-        const skus: SkuJoined[] = await this.SkuDao.aggregate(query);
-
-        skus.forEach((rela) => {
-            rela.joinOrderContact = rela.joinOrderContact[0];
-        });
-
-        return skus;
-    }
-
-    async setOrderSku(orders: OrderJoined[]): Promise<OrderJoined[]> {
-        const skus = await this.getSkuMatched({ orderId: { $in: orders.map((e) => e._id) } });
-        for (const order of orders) {
-            order["joinSku"] = skus.filter((e) => e.orderId === order._id).reverse();
-        }
-        return orders;
-    }
-
     /**
      * @pounds 000 kg
      * @count 个
