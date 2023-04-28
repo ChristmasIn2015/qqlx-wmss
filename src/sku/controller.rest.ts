@@ -11,8 +11,8 @@ import {
     patchSkuRes,
     Sku,
     SkuJoined,
-    getSkuByOrderDto,
-    getSkuByOrderRes,
+    getOrderInfoDto,
+    getOrderInfoRes,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 

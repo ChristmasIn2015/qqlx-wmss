@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Put, SetMetadata, UseGuards } from "@nestjs/common";
 
-import { getRangeMonth, trimObject } from "qqlx-cdk";
+import { PageRes, getRangeMonth, trimObject } from "qqlx-cdk";
 import {
     ENUM_ORDER,
     PATH_ORDER,
@@ -13,8 +13,8 @@ import {
     deleteOrderDto,
     deleteOrderRes,
     OrderJoined,
-    getSkuByOrderDto,
-    getSkuByOrderRes,
+    getOrderInfoDto,
+    getOrderInfoRes,
     BookOfOrder,
     Order,
     ENUM_BRAND_ROLE,
@@ -47,9 +47,9 @@ export class OrderController extends CorpLock {
         private readonly OrderService: OrderService,
         private readonly JoinService: JoinService,
         private readonly ClueService: ClueService,
-        private readonly AnalysisService: AnalysisService,
-        private readonly MarketRemote: MarketRemote,
-        private readonly BrandRemote: BrandRemote,
+        // private readonly AnalysisService: AnalysisService,
+        // private readonly MarketRemote: MarketRemote,
+        // private readonly BrandRemote: BrandRemote,
         private readonly UserRemote: UserRemote,
         //
 
@@ -62,14 +62,18 @@ export class OrderController extends CorpLock {
     }
 
     async init() {
-        const all: Order[] = await this.OrderDao.query({ contactId: { $ne: "" } });
-        const contactIds = [...new Set([...all.filter((e) => e.contactId).map((e) => e.contactId)])];
-        let count = 0;
-        for (const contactId of contactIds) {
-            console.log(++count, contactIds.length);
-            await this.AnalysisService.updateContactAnalysis(all.find((e) => e.contactId === contactId).corpId, contactId);
-        }
-        console.log("order init end");
+        // const all: Order[] = await this.OrderDao.query({
+        //     type: { $in: [ENUM_ORDER.SALES, ENUM_ORDER.PURCHASE] },
+        //     isDisabled: false,
+        //     contactId: { $ne: "" },
+        // });
+        // const contactIds = [...new Set([...all.filter((e) => e.contactId).map((e) => e.contactId)])];
+        // let count = 0;
+        // for (const contactId of contactIds) {
+        //     console.log(++count, contactIds.length);
+        //     const order = all.find((e) => e.contactId === contactId);
+        //     await this.AnalysisService.updateContactAnalysis(all.find((e) => e.contactId === contactId).corpId, contactId);
+        // }
     }
 
     @Post()
@@ -77,47 +81,29 @@ export class OrderController extends CorpLock {
     async postOrder(@Body("dto") dto: postOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<postOrderRes> {
         const schema = dto.schema;
 
-        // *剩余有效期必须足够
-        await this.MarketRemote.isCorpEmpower({ corpId: BrandDTO.corp._id });
+        // 校验
+        await this.OrderService.chargeOrder(BrandDTO.corp?._id, BrandDTO.userInfo?.userId, {
+            orderType: schema.type,
+            parentOrderId: schema.parentOrderId,
+            parentOrderType: schema.parentOrderType,
+        });
 
-        // *权限必须足够
-        const valid = { userId: BrandDTO.userInfo?.userId, corpId: BrandDTO.corp._id };
-        if (schema.type === ENUM_ORDER.SALES) {
-            await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.SALES });
-        } else if (schema.type === ENUM_ORDER.PURCHASE) {
-            await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.PURCHASE });
-        } else if ([ENUM_ORDER.GETIN, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL, ENUM_ORDER.PROCESS].includes(schema.type)) {
-            await this.BrandRemote.getMarketRole({ ...valid, role: ENUM_BRAND_ROLE.WM });
-        }
-
-        // 最多创建一项关联订单
-        if (schema.parentOrderId) {
-            // 采购1 入库1
-            if (schema.parentOrderType === ENUM_ORDER.PURCHASE) {
-                const existCount = await this.OrderDao.count({ corpId: BrandDTO.corp._id, parentOrderId: schema.parentOrderId, type: ENUM_ORDER.GETIN });
-                if (existCount > 0) throw new Error(`仓库已卸货，请检查对应入库单`);
-            }
-            // 销售1 发货1
-            else if (schema.parentOrderType === ENUM_ORDER.SALES) {
-                const existCount = await this.OrderDao.count({ corpId: BrandDTO.corp._id, parentOrderId: schema.parentOrderId, type: ENUM_ORDER.GETOUT });
-                if (existCount > 0) throw new Error(`仓库已备货，请检查对应发货单`);
-            }
-            // 无法创建其他类型关联订单
-            else {
-                throw new Error(`单据错误，已提交技术中心`);
-            }
-        }
-
+        // 创建订单
         schema.corpId = BrandDTO.corp._id;
         schema.creatorId = BrandDTO.userInfo.userId;
         schema.code = await this.getCode(BrandDTO.corp._id, schema.type);
         const entity = await this.OrderDao.create(schema);
 
-        // Sku
-        if (dto.skuList?.length > 0) await this.SkuService.createSku(dto.skuList, entity);
+        // 关联Sku更新
+        if (dto.skuList?.length > 0) {
+            await this.SkuService.createSku(dto.skuList, entity);
+        }
 
-        // 更新
-        const amountInfo = await this.JoinService.resetAmountOrder(BrandDTO.corp._id, entity._id);
+        // 关联信息更新
+        await this.JoinService.resetOrderAmount(BrandDTO.corp._id, entity._id);
+        await this.JoinService.resetOrderContact(BrandDTO.corp._id, entity._id);
+
+        // 日志
         this.ClueService.insertOrderCreation(BrandDTO, entity); //async
         return entity;
     }
@@ -126,7 +112,6 @@ export class OrderController extends CorpLock {
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
     async getOrder(@Body("dto") dto: getOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getOrderRes> {
         const search = dto.search;
-
         trimObject(search);
 
         const query = {
@@ -142,31 +127,21 @@ export class OrderController extends CorpLock {
         if (dto.requireAccounterId) query["accounterId"] = "";
 
         // 排序
-        const option = {
-            sortKey: dto.sortKey,
-            sortValue: dto.sortValue,
-            groupKey: "amount",
-        };
+        const option = { sortKey: dto.sortKey, sortValue: dto.sortValue, groupKey: "amount" };
 
-        // 查询
+        // 查询（并匹配用户信息）
         const page = await this.OrderDao.page(query, dto.page, option);
-
-        // 聚合其他信息
-        await this.OrderService.setOrderJoined(page.list, dto);
-        if (dto.joinSku) await this.SkuService.setOrderSku(page.list);
+        page.list = await this.OrderService.getOrderJoined(page.list);
 
         // View
         page.list.forEach((order) => {
             order.amount /= 100;
             order.amountBookOfOrder /= 100;
             order.amountBookOfOrderRest /= 100;
-            dto.joinSku &&
-                (order as OrderJoined).joinSku.forEach((sku) => {
-                    sku.pounds /= 1000;
-                    sku.price /= 100;
-                });
+            order.amountBookOfOrderVAT /= 100;
+            order.amountBookOfOrderVATRest /= 100;
         });
-        return page;
+        return page as PageRes<OrderJoined>;
     }
 
     @Put()
@@ -182,6 +157,7 @@ export class OrderController extends CorpLock {
             accounterId: dto.entity.accounterId,
             remark: dto.entity.remark,
         };
+
         // sku
         if (dto.skuList && dto.skuList.length > 0) {
             if (order.managerId) throw Error(`单据已复核！`);
@@ -192,13 +168,14 @@ export class OrderController extends CorpLock {
             await this.SkuService.createSku(dto.skuList, order);
         }
 
+        // 更新
         const entity = await this.OrderDao.updateOne(order._id, updater);
 
-        // 重新关联客户
+        // 关联信息更新
+        await this.JoinService.resetOrderAmount(BrandDTO.corp._id, entity._id);
         await this.JoinService.resetOrderContact(BrandDTO.corp._id, entity._id);
 
-        // 重新关联金额
-        await this.JoinService.resetAmountOrder(BrandDTO.corp._id, entity._id);
+        // 日志
         this.ClueService.insertOrderEdition(BrandDTO, entity); //async
         return entity;
     }
@@ -250,12 +227,14 @@ export class OrderController extends CorpLock {
             }
         }
 
+        // 关联信息更新
+        await this.JoinService.resetOrderAmount(BrandDTO.corp._id, order._id);
         return null;
     }
 
     @Post("/info/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
-    async getOrderInfo(@Body("dto") dto: getSkuByOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuByOrderRes> {
+    async getOrderInfo(@Body("dto") dto: getOrderInfoDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getOrderInfoRes> {
         const { orderId } = dto;
         const match = { orderId, corpId: BrandDTO.corp._id };
         const order = await this.OrderDao.findOne(orderId);

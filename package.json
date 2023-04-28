@@ -21,7 +21,7 @@
         "jsonwebtoken": "^9.0.0",
         "mongoose": "^6.8.3",
         "qqlx-cdk": "^0.0.13",
-        "qqlx-core": "^1.0.44",
+        "qqlx-core": "^1.0.56",
         "qqlx-sdk": "^0.0.41",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.2.0"

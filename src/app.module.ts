@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 
-import { Book, BookOfOrder, BookOfSelf, BookSchema, BookOfOrderSchema, BookOfSelfSchema, BookDao, BookOfOrderDao, BookOfSelfDao } from "dao/book";
+import { Book, BookOfOrder, BookSchema, BookOfOrderSchema, BookDao, BookOfOrderDao } from "dao/book";
 import { Cabinet, CabinetSchema, CabinetDao, CabinetUnit, CabinetUnitSchema, CabinetUnitDao } from "dao/cabinet";
 import { Clue, ClueSchema, ClueDao } from "dao/clue";
 import { Order, OrderSchema, OrderDao } from "dao/order";
@@ -34,7 +34,6 @@ import { SkuController } from "src/sku/controller.rest";
             { name: Clue.name, schema: ClueSchema },
             { name: Book.name, schema: BookSchema },
             { name: BookOfOrder.name, schema: BookOfOrderSchema },
-            { name: BookOfSelf.name, schema: BookOfSelfSchema },
             { name: Cabinet.name, schema: CabinetSchema },
             { name: CabinetUnit.name, schema: CabinetUnitSchema },
             { name: Order.name, schema: OrderSchema },
@@ -55,7 +54,6 @@ import { SkuController } from "src/sku/controller.rest";
     providers: [
         BookDao,
         BookOfOrderDao,
-        BookOfSelfDao,
         CabinetDao,
         CabinetUnitDao,
         ClueDao,

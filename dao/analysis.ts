@@ -44,6 +44,16 @@ export class ContactAnalysis implements _ {
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
     })
     amountBookOfOrderRest: number;
+    @Prop({
+        default: 0,
+        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+    })
+    amountBookOfOrderVAT: number;
+    @Prop({
+        default: 0,
+        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+    })
+    amountBookOfOrderVATRest: number;
 
     @Prop({ required: true })
     _id: string;

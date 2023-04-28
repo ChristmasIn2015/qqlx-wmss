@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 
-import { Order, Book } from "qqlx-core";
+import { Order, Book, ENUM_BOOK_TYPE, ENUM_BOOK_DIRECTION, ENUM_ORDER } from "qqlx-core";
 
 import { CorpLock } from "global/lock.corp";
 import { AnalysisService } from "src/analysis/service";
 import { SkuDao } from "dao/sku";
 import { OrderDao } from "dao/order";
-import { BookDao, BookOfOrderDao, BookOfSelfDao } from "dao/book";
+import { BookDao, BookOfOrderDao } from "dao/book";
 
 @Injectable()
 export class JoinService extends CorpLock {
@@ -16,8 +16,7 @@ export class JoinService extends CorpLock {
         private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
         private readonly BookDao: BookDao,
-        private readonly BookOfOrderDao: BookOfOrderDao,
-        private readonly BookOfSelfDao: BookOfSelfDao
+        private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
     }
@@ -26,22 +25,14 @@ export class JoinService extends CorpLock {
         const order: Order = await this.OrderDao.findOne(orderId);
         if (!order) return;
 
-        await this.SkuDao.updateMany({ orderId }, { orderContactId: order.contactId });
-        await this.BookOfOrderDao.updateMany({ orderId }, { orderContactId: order.contactId });
-        await this.OrderDao.updateMany({ corpId, parentOrderId: orderId }, { contactId: order.contactId });
-
-        // 补充客户分析
-        await this.AnalysisService.updateContactAnalysis(order.corpId, order.contactId);
+        await Promise.all([
+            this.SkuDao.updateMany({ orderId }, { orderContactId: order.contactId }),
+            this.BookOfOrderDao.updateMany({ orderId }, { orderContactId: order.contactId }),
+            this.OrderDao.updateMany({ corpId, parentOrderId: orderId }, { contactId: order.contactId }),
+        ]);
     }
 
-    resetAmountOrder(
-        corpId: string,
-        orderId: string
-    ): Promise<{
-        amount: number;
-        amountBookOfOrder: number;
-        amountBookOfOrderRest: number;
-    }> {
+    resetOrderAmount(corpId: string, orderId: string) {
         return new Promise((resolve, reject) => {
             const lock = this.getLock(corpId);
             lock.acquire("amount-book", async () => {
@@ -49,33 +40,55 @@ export class JoinService extends CorpLock {
                     amount: 0,
                     amountBookOfOrder: 0,
                     amountBookOfOrderRest: 0,
+                    amountBookOfOrderVAT: 0,
+                    amountBookOfOrderVATRest: 0,
                 };
                 let errorMessage = null;
                 try {
                     const order: Order = await this.OrderDao.findOne(orderId);
                     if (!order) return;
+                    else if (![ENUM_ORDER.SALES, ENUM_ORDER.PURCHASE].includes(order.type)) return;
 
                     // SKU
                     const skus = await this.SkuDao.query({ orderId });
                     skus.map((sku) => (updater.amount += (sku.isPriceInPounds ? sku.pounds / 1000 : sku.count) * sku.price));
 
-                    // BOOK
+                    // 资金
+                    const match3 =
+                        order.type === ENUM_ORDER.SALES
+                            ? { orderId, bookType: ENUM_BOOK_TYPE.YSZK, bookDirection: ENUM_BOOK_DIRECTION.DAI }
+                            : { orderId, bookType: ENUM_BOOK_TYPE.YFZK, bookDirection: ENUM_BOOK_DIRECTION.JIE };
                     const aggre3 = await this.BookOfOrderDao.aggregate([
-                        //
-                        { $match: { orderId } },
+                        { $match: match3 },
                         { $group: { _id: "result", total: { $sum: "$amount" } } },
+                        //
                     ]);
                     updater.amountBookOfOrder = aggre3[0]?.total ?? 0;
                     updater.amountBookOfOrderRest = updater.amount - updater.amountBookOfOrder;
+
+                    // 发票
+                    const match4 =
+                        order.type === ENUM_ORDER.SALES
+                            ? { orderId, bookType: ENUM_BOOK_TYPE.YSZK_VAT, bookDirection: ENUM_BOOK_DIRECTION.JIE }
+                            : { orderId, bookType: ENUM_BOOK_TYPE.YFZK_VAT, bookDirection: ENUM_BOOK_DIRECTION.DAI };
+                    const aggre4 = await this.BookOfOrderDao.aggregate([
+                        { $match: match4 },
+                        { $group: { _id: "result", total: { $sum: "$amount" } } },
+                        //
+                    ]);
+                    updater.amountBookOfOrderVAT = aggre4[0]?.total ?? 0;
+                    updater.amountBookOfOrderVATRest = updater.amount - updater.amountBookOfOrderVAT;
 
                     // 金额换算
                     updater.amount /= 100;
                     updater.amountBookOfOrder /= 100;
                     updater.amountBookOfOrderRest /= 100;
+                    updater.amountBookOfOrderVAT /= 100;
+                    updater.amountBookOfOrderVATRest /= 100;
                     await this.OrderDao.updateOne(orderId, updater);
 
                     // 补充客户分析
-                    await this.AnalysisService.updateContactAnalysis(order.corpId, order.contactId);
+                    await this.AnalysisService.updateContactAnalysis(order.corpId, order.contactId, order.type);
                 } catch (error) {
                     errorMessage = error.message;
                 } finally {
@@ -97,8 +110,6 @@ export class JoinService extends CorpLock {
                     const updater = {
                         amountBookOfOrder: book.amountBookOfOrder,
                         amountBookOfOrderRest: book.amountBookOfOrderRest,
-                        amountBookOfSelf: book.amountBookOfSelf,
-                        amountBookOfSelfRest: book.amountBookOfSelfRest,
                     };
 
                     // 资金-订单
@@ -109,19 +120,9 @@ export class JoinService extends CorpLock {
                     updater.amountBookOfOrder = aggre1[0]?.total ?? 0;
                     updater.amountBookOfOrderRest = book.amount - updater.amountBookOfOrder;
 
-                    // 资金-订单-发票
-                    const aggre2 = await this.BookOfSelfDao.aggregate([
-                        { $match: { $or: [{ invoiceId: book._id }, { bookId: book._id }] } },
-                        { $group: { _id: "result", total: { $sum: "$amount" } } },
-                    ]);
-                    updater.amountBookOfSelf = aggre2[0]?.total ?? 0;
-                    updater.amountBookOfSelfRest = book.amount - updater.amountBookOfSelf;
-
                     // 金额换算
                     updater.amountBookOfOrder /= 100;
                     updater.amountBookOfOrderRest /= 100;
-                    updater.amountBookOfSelf /= 100;
-                    updater.amountBookOfSelfRest /= 100;
                     await this.BookDao.updateOne(book._id, updater);
                 } catch (error) {
                     errorMessage = error.message;

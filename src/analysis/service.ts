@@ -18,12 +18,12 @@ export class AnalysisService extends CorpLock {
         super();
     }
 
-    async updateContactAnalysis(corpId: string, contactId: string) {
+    async updateContactAnalysis(corpId: string, contactId: string, type: ENUM_ORDER) {
         const lock = this.getLock(corpId);
         lock.acquire("amount-book11", () => {
             return new Promise(async (resolve, reject) => {
                 try {
-                    const match = { corpId, contactId, type: ENUM_ORDER.SALES };
+                    const match = { corpId, contactId, type };
                     const count = await this.ContactAnalysisDao.count(match);
                     if (count === 0) await this.ContactAnalysisDao.create(match);
 
@@ -38,6 +38,8 @@ export class AnalysisService extends CorpLock {
                                 amountOrder: { $sum: "$amount" },
                                 amountBookOfOrder: { $sum: "$amountBookOfOrder" },
                                 amountBookOfOrderRest: { $sum: "$amountBookOfOrderRest" },
+                                amountBookOfOrderVAT: { $sum: "$amountBookOfOrderVAT" },
+                                amountBookOfOrderVATRest: { $sum: "$amountBookOfOrderVATRest" },
                             },
                         },
                     ]);
@@ -46,6 +48,8 @@ export class AnalysisService extends CorpLock {
                         amountOrder: Number(group[0]?.amountOrder ?? 0) / 100,
                         amountBookOfOrder: Number(group[0]?.amountBookOfOrder ?? 0) / 100,
                         amountBookOfOrderRest: Number(group[0]?.amountBookOfOrderRest ?? 0) / 100,
+                        amountBookOfOrderVAT: Number(group[0]?.amountBookOfOrderVAT ?? 0) / 100,
+                        amountBookOfOrderVATRest: Number(group[0]?.amountBookOfOrderRestVAT ?? 0) / 100,
                     };
                     await this.ContactAnalysisDao.updateOne(exist._id, updater);
                     resolve(true);

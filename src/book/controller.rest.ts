@@ -22,7 +22,7 @@ import { BrandDTO } from "qqlx-sdk";
 
 import { BrandGuard, ENUM_BRAND_ROLE_ALL } from "global/brand.guard";
 import { CorpLock } from "global/lock.corp";
-import { BookDao, BookOfOrderDao, BookOfSelfDao } from "dao/book";
+import { BookDao, BookOfOrderDao } from "dao/book";
 import { BookService } from "src/book/service";
 import { JoinService } from "src/join/service";
 
@@ -34,10 +34,21 @@ export class BookController extends CorpLock {
         private readonly bookService: BookService,
         //
         private readonly BookDao: BookDao,
-        private readonly BookOfOrderDao: BookOfOrderDao,
-        private readonly BookOfSelfDao: BookOfSelfDao
+        private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
+    }
+
+    private async init() {
+        const bos = await this.BookOfOrderDao.query({});
+        let count = 0;
+        for (const bookOfOrder of bos) {
+            const book = await this.BookDao.findOne(bookOfOrder.bookId);
+            const updater = { bookType: book.type, bookDirection: book.direction };
+            await this.BookOfOrderDao.updateOne(bookOfOrder._id, updater);
+            count++;
+            console.log(count, updater, bos.length);
+        }
     }
 
     @Post()
@@ -45,13 +56,12 @@ export class BookController extends CorpLock {
     async postBook(@Body("dto") dto: postBookDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<postBookRes> {
         if (dto.excels?.length > 100) throw new Error(`上传限制 100 项`);
 
-        const entitys = [];
+        const entitys: Book[] = [];
         for (let schema of dto.excels) {
             schema.corpId = BrandDTO.corp._id;
             schema.code = await this.getCode(BrandDTO.corp._id, schema.direction, schema.type, schema.timeCreate);
             schema.amount = Number(schema.amount);
             schema.amountBookOfOrderRest = schema.amount;
-            schema.amountBookOfSelfRest = schema.amount;
             const entity = await this.BookDao.create(schema);
             entitys.push(entity);
         }
@@ -60,8 +70,6 @@ export class BookController extends CorpLock {
             e.amount /= 100;
             e.amountBookOfOrder /= 100;
             e.amountBookOfOrderRest /= 100;
-            e.amountBookOfSelf /= 100;
-            e.amountBookOfSelfRest /= 100;
             return e;
         });
     }
@@ -93,30 +101,25 @@ export class BookController extends CorpLock {
 
         // 正常查询
         const page = await this.BookDao.page(query, dto.page, option);
-        page.list = await this.bookService.getBookJoined(page.list);
 
-        // 金额换算
-        page.list.forEach((book: BookJoined) => {
+        // 匹配
+        const order_ofs = await this.bookService.getBookOfOrder(page.list.map((e) => e._id));
+        (page.list as BookJoined[]).forEach((book) => {
             book.amount /= 100;
             book.amountBookOfOrder /= 100;
             book.amountBookOfOrderRest /= 100;
-            book.amountBookOfSelf /= 100;
-            book.amountBookOfSelfRest /= 100;
+
+            book.joinBookOfOrder = order_ofs.filter((ee) => ee.bookId === book._id);
             book.joinBookOfOrder.forEach((e) => {
                 e.amount /= 100;
                 e.joinOrder.amount /= 100;
                 e.joinOrder.amountBookOfOrder /= 100;
                 e.joinOrder.amountBookOfOrderRest /= 100;
-            });
-            book.joinBookOfSelf.forEach((e) => {
-                e.amount /= 100;
-                e.joinBook.amount /= 100;
-                e.joinBook.amountBookOfOrder /= 100;
-                e.joinBook.amountBookOfOrderRest /= 100;
-                e.joinBook.amountBookOfSelf /= 100;
-                e.joinBook.amountBookOfSelfRest /= 100;
+                e.joinOrder.amountBookOfOrderVAT /= 100;
+                e.joinOrder.amountBookOfOrderVATRest /= 100;
             });
         });
+
         return page;
     }
 
@@ -144,24 +147,16 @@ export class BookController extends CorpLock {
             for (const order of dto.orders) {
                 const schema = this.BookOfOrderDao.getSchema();
                 schema.bookId = entity._id;
-                schema.amount = Number(order.amount) || 0;
-                schema.orderId = order._id;
-                schema.orderContactId = order.contactId;
-                schema.amount > 0 && (await this.BookOfOrderDao.create(schema));
-                await this.JoinService.resetAmountOrder(BrandDTO.corp._id, order._id);
-            }
-        }
+                schema.bookType = entity.type;
+                schema.bookDirection = entity.direction;
 
-        // 发票相关
-        if (dto.books) {
-            await this.bookService.deleteBookOfSelfs(BrandDTO.corp._id, [entity._id]);
-            for (const book of dto.books) {
-                const schema = this.BookOfSelfDao.getSchema();
-                schema.invoiceId = entity._id;
-                schema.amount = Number(book.amount) || 0;
-                schema.bookId = book._id;
-                schema.amount > 0 && (await this.BookOfSelfDao.create(schema));
-                await this.JoinService.resetAmountBook(BrandDTO.corp._id, book._id);
+                schema.orderId = order._id;
+                schema.orderType = order.type;
+                schema.orderContactId = order.contactId;
+
+                schema.amount = Number(order.amount) || 0;
+                schema.amount > 0 && (await this.BookOfOrderDao.create(schema));
+                await this.JoinService.resetOrderAmount(BrandDTO.corp._id, order._id);
             }
         }
 
@@ -186,10 +181,6 @@ export class BookController extends CorpLock {
 
         if (deleting.length > 0) {
             await this.bookService.deleteBookOfOrders(
-                BrandDTO.corp._id,
-                deleting.map((e) => e._id)
-            );
-            await this.bookService.deleteBookOfSelfs(
                 BrandDTO.corp._id,
                 deleting.map((e) => e._id)
             );
