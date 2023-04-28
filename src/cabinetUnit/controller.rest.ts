@@ -30,18 +30,7 @@ export class CabinetUnitController {
 
         //
         private readonly CabinetUnitDao: CabinetUnitDao
-    ) {
-        this.init2();
-    }
-
-    async init2() {
-        const all = await this.CabinetUnitDao.query({});
-        let count = 0;
-        for (const unit of all) {
-            await this.cabinetUnitService.resetCabinetUnit(unit.corpId, unit.name, unit.norm, unit.areaId);
-            console.log(++count, " / ", all.length, "reset unit");
-        }
-    }
+    ) {}
 
     @Post()
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_CORE)
