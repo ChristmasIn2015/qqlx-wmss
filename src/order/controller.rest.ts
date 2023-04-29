@@ -58,19 +58,6 @@ export class OrderController extends CorpLock {
         private readonly BookOfOrderDao: BookOfOrderDao
     ) {
         super();
-        this.init();
-    }
-
-    async init() {
-        const all: Order[] = await this.OrderDao.query({
-            type: { $in: [ENUM_ORDER.SALES, ENUM_ORDER.PURCHASE] },
-            isDisabled: false,
-        });
-        let count = 0;
-        for (const order of all) {
-            await this.JoinService.resetOrderAmount(order.corpId, order._id);
-            console.log(++count, all.length, "reset order amount");
-        }
     }
 
     @Post()
