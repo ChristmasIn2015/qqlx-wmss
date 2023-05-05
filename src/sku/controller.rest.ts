@@ -30,7 +30,7 @@ export class SkuController {
         private readonly OrderDao: OrderDao,
         private readonly SkuService: SkuService
     ) {
-        // this.init();
+        this.init();
     }
 
     async init() {
