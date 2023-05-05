@@ -206,7 +206,7 @@ export class SkuService extends CorpLock {
     }
 
     private async setSkuConfirmCancel(exist: Sku): Promise<Sku> {
-        const deductionSkuList = await this.SkuDao.query({ deductionSkuId: exist._id });
+        const deductionSkuList = await this.SkuDao.query({ deductionSkuId: exist._id, orderIsDisabled: false });
         const isGetOut = deductionSkuList.find((e) => e.type === ENUM_ORDER.GETOUT);
         const isMaterial = deductionSkuList.find((e) => e.type === ENUM_ORDER.MATERIAL);
 
