@@ -184,10 +184,10 @@ export class OrderController extends CorpLock {
                 if (parent.managerId) throw new Error(`来源单据已复核，请检查后重新尝试`);
                 else if (parent.accounterId) throw new Error(`财务已对来源单据签字，请检查后重新尝试`);
             }
-            const childs = await this.OrderDao.count({ parentOrderId: order._id });
+            const childs = await this.OrderDao.count({ corpId: BrandDTO.corp._id, parentOrderId: order._id, isDisabled: false });
             if (childs > 0) throw new Error(`检查到其他订单，请删除后重新尝试`);
 
-            const calcu = await this.SkuService.getSkuCalculation({ corpId: BrandDTO.corp._id, orderId: order._id });
+            const calcu = await this.SkuService.getSkuCalculation({ corpId: BrandDTO.corp._id, orderId: order._id, orderIsDisabled: false });
             for (let sku of calcu.list) {
                 await this.SkuService.skuConfirmCancel(sku);
                 await this.SkuDao.updateOne(sku._id, { orderIsDisabled: true });
