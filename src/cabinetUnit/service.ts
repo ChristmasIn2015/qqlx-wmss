@@ -92,13 +92,12 @@ export class CabinetUnitService extends CorpLock {
         if (!schema.norm) throw new Error("请输入商品规格");
         trimObject(schema);
 
-        const exists = await this.CabinetUnitDao.query({ corpId, name: schema.name, norm: schema.norm, areaId: schema.areaId });
+        const exists = await this.CabinetUnitDao.query({ corpId, name: schema.name, norm: schema.norm });
         const exist = exists[0];
         if (exist) return exist;
 
         schema.corpId = corpId;
         schema.cabinetId = entity._id;
-        schema.areaId = schema.areaId;
         schema.poundsFinal = 0;
         schema.countFinal = 0;
         schema.price = Number(schema.price) || 0;
@@ -106,20 +105,20 @@ export class CabinetUnitService extends CorpLock {
         return created;
     }
 
-    resetCabinetUnit(corpId: string, name: string, norm: string, areaId: string = "") {
+    resetCabinetUnit(corpId: string, name: string, norm: string) {
         return new Promise((resolve, reject) => {
             const lock = this.getLock(corpId);
             lock.acquire("cabinet-unit", async () => {
                 let errorMessage = null;
                 try {
-                    const query = { corpId, name, norm, areaId };
+                    const query = { corpId, name, norm };
                     trimObject(query);
 
                     const units = await this.CabinetUnitDao.query(query);
                     const unit = units[0];
                     if (!unit) return;
 
-                    const base = { corpId, isConfirmed: true, orderIsDisabled: false, name, norm, areaId };
+                    const base = { corpId, isConfirmed: true, orderIsDisabled: false, name, norm };
                     const getin = { ...base, type: ENUM_ORDER.GETIN }; // +入库单
                     const process = { ...base, type: ENUM_ORDER.PROCESS }; // +生产单
                     const getout = { ...base, type: ENUM_ORDER.GETOUT, deductionSkuId: "" }; // -发货单

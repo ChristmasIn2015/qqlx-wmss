@@ -195,14 +195,6 @@ export class OrderController extends CorpLock {
 
             const updater = { isDisabled: true };
             await this.OrderDao.updateOne(order._id, updater);
-
-            // 订单需要完全删除
-            const isRelated = order.parentOrderId && order.parentOrderType;
-            const isWarehouse = [ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS, ENUM_ORDER.MATERIAL, ENUM_ORDER.GETOUT].includes(order.type);
-            if (isRelated || isWarehouse) {
-                await this.SkuDao.deleteMany(calcu.list.map((e) => e._id));
-                await this.OrderDao.delete(order._id);
-            }
         }
 
         // 恢复订单
@@ -234,7 +226,10 @@ export class OrderController extends CorpLock {
             this._getOrderBooks(order._id),
             this.UserRemote.getUserInfoList({ userIds: [order.creatorId, order.managerId, order.accounterId] }),
             this.OrderDao.query({
-                $or: [{ _id: order.parentOrderId }, { parentOrderId: order._id }],
+                $or: [
+                    { _id: order.parentOrderId, isDisabled: false },
+                    { parentOrderId: order._id, isDisabled: false },
+                ],
             }),
         ]);
 

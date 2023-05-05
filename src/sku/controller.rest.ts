@@ -29,7 +29,14 @@ export class SkuController {
         private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
         private readonly SkuService: SkuService
-    ) {}
+    ) {
+        // this.init();
+    }
+
+    async init() {
+        await this.SkuDao.updateMany({}, { keyHouse: "" });
+        console.log("sku init keyhouse end");
+    }
 
     @Post("/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
@@ -56,8 +63,9 @@ export class SkuController {
             ...(search.keyOrigin && { keyOrigin: new RegExp(search.keyOrigin) }),
             ...(search.keyFeat && { keyFeat: new RegExp(search.keyFeat) }),
             ...(search.keyCode && { keyCode: new RegExp(search.keyCode) }),
+            ...(search.warehouseId && { warehouseId: search.warehouseId }),
+            ...(search.keyHouse && { keyCode: new RegExp(search.keyHouse) }),
             ...(search.orderContactId && { orderContactId: search.orderContactId }),
-            ...(search.areaId && { areaId: search.areaId || "" }),
         };
 
         // 排序
@@ -67,6 +75,7 @@ export class SkuController {
             groupKey: dto.groupKey,
         };
 
+        if (base.layout === ENUM_LAYOUT_CABINET.INDIVIDUAL) dto.page.startTime = 0;
         const page = (await this.SkuDao.page(query, dto.page, option)) as PageRes<SkuJoined>;
         page.list = await this.SkuService.getSkuJoined(
             page.list.map((e) => e._id),
@@ -85,27 +94,47 @@ export class SkuController {
 
     @Post("/rela-order/get")
     async getSkuRelaOrder(@Body("dto") dto: { deductionSkuId: string }, @Body("BrandDTO") BrandDTO: BrandDTO) {
+        const base = { corpId: BrandDTO.corp?._id, orderIsDisabled: false, isConfirmed: true };
+        // 入库
+        const skus_getin = await this.SkuDao.query({
+            ...base,
+            _id: dto.deductionSkuId,
+            type: ENUM_ORDER.GETIN,
+        });
+
         // 领料
-        const skus = await this.SkuDao.query({
-            corpId: BrandDTO.corp?._id,
+        const skus_material = await this.SkuDao.query({
+            ...base,
             type: ENUM_ORDER.MATERIAL,
             deductionSkuId: dto.deductionSkuId,
         });
 
         // 加工
         const orders_process = await this.OrderDao.query({
-            corpId: BrandDTO.corp?._id,
+            ...base,
             type: ENUM_ORDER.PROCESS,
-            parentOrderId: { $in: [...new Set(skus.filter((e) => e.orderId).map((e) => e.orderId))] },
+            parentOrderId: { $in: [...new Set(skus_material.filter((e) => e.orderId).map((e) => e.orderId))] },
         });
         const skus_process = await this.SkuDao.query({
-            corpId: BrandDTO.corp?._id,
+            ...base,
             type: ENUM_ORDER.PROCESS,
             orderId: { $in: orders_process.map((e) => e._id) },
         });
 
+        // 发货
+        const skus_getout = await this.SkuDao.query({
+            ...base,
+            type: ENUM_ORDER.GETOUT,
+            deductionSkuId: dto.deductionSkuId,
+        });
+
         // end
-        const result = await this.SkuService.getSkuJoined([...skus.map((e) => e._id), ...skus_process.map((e) => e._id)]);
+        const result = await this.SkuService.getSkuJoined([
+            ...skus_getin.map((e) => e._id),
+            ...skus_material.map((e) => e._id),
+            ...skus_process.map((e) => e._id),
+            ...skus_getout.map((e) => e._id),
+        ]);
         result.forEach((e) => {
             e.pounds /= 1000;
             e.poundsFinal /= 1000;
@@ -119,9 +148,9 @@ export class SkuController {
         let exist = await this.SkuDao.findOne(dto.entity?._id);
         if (!exist) throw new Error(`找不到商品`);
 
-        if (dto.entity.deductionSkuId) {
-            exist = await this.SkuDao.updateOne(exist._id, { deductionSkuId: dto.entity.deductionSkuId });
-        }
+        // if (dto.entity.deductionSkuId) {
+        //     exist = await this.SkuDao.updateOne(exist._id, { deductionSkuId: dto.entity.deductionSkuId });
+        // }
 
         if (exist.isConfirmed) {
             await this.SkuService.skuConfirmCancel(exist);

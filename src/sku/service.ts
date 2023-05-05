@@ -85,13 +85,13 @@ export class SkuService extends CorpLock {
             { $sort: sort },
             { $lookup: { from: "orders", localField: "orderId", foreignField: "_id", as: "joinOrder" } },
             { $lookup: { from: "contacts", localField: "orderContactId", foreignField: "_id", as: "joinOrderContact" } },
+            { $lookup: { from: "warehouses", localField: "warehouseId", foreignField: "_id", as: "joinWarehouse" } },
         ];
         const skus: SkuJoined[] = await this.SkuDao.aggregate(query);
 
         if (skus.length > 0) {
-            const areas = await this.BrandRemote.getArea({ corpId: skus[0]?.corpId });
             skus.forEach((rela) => {
-                rela.joinArea = areas.find((e) => e._id === rela.areaId);
+                rela.joinWarehouse && (rela.joinWarehouse = rela.joinWarehouse[0]);
                 rela.joinOrder && (rela.joinOrder = rela.joinOrder[0]);
                 rela.joinOrderContact && (rela.joinOrderContact = rela.joinOrderContact[0]);
             });
@@ -127,12 +127,12 @@ export class SkuService extends CorpLock {
 
             if ([ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL].includes(exist.type)) {
                 // 计算发货、领料后的库存
-                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm, exist.areaId);
+                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm);
 
                 // 发货、领料有可能需要从入库库存中扣除本次消耗
                 if (exist.deductionSkuId) {
                     const deductionSku = await this.resetDeductionSku(exist);
-                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm, deductionSku.areaId);
+                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm);
                 }
             }
         }
@@ -144,12 +144,12 @@ export class SkuService extends CorpLock {
 
             if ([ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS, ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL].includes(exist.type)) {
                 // 计算发货、领料后的库存
-                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm, exist.areaId);
+                await this.CabinetUnitService.resetCabinetUnit(exist.corpId, exist.name, exist.norm);
 
                 // 发货、领料有可能需要从入库库存中扣除本次消耗
                 if (exist.deductionSkuId) {
                     const deductionSku = await this.resetDeductionSku(exist);
-                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm, deductionSku.areaId);
+                    await this.CabinetUnitService.resetCabinetUnit(exist.corpId, deductionSku.name, deductionSku.norm);
                 }
             }
         }

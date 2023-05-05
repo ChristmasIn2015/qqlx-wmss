@@ -182,21 +182,18 @@ export class BookController extends CorpLock {
         return new Promise((resolve) => {
             const lock = this.getLock(corpId);
             lock.acquire("book-code", async () => {
-                const range = getRangeMonth();
+                const date = new Date(timeCreate);
+                const _month = date.getMonth();
+                const startTime = new Date(date.getFullYear(), _month, 1).getTime();
+                const endTime = new Date(date.getFullYear(), _month === 11 ? 0 : _month + 1, 0).getTime() + 86400000 - 1;
 
-                const count = await this.BookDao.count(
-                    { corpId, direction, type },
-                    {
-                        startTime: range.startTime,
-                        endTime: range.endTime,
-                    }
-                );
+                const count = await this.BookDao.count({ corpId, direction, type }, { startTime, endTime });
 
-                const date = new Date(range.startTime);
                 const yearStr = date.getFullYear();
                 const month = date.getMonth() + 1;
                 const monthStr = month < 10 ? `0${month}` : month;
-                resolve(`${yearStr}${monthStr}-${count + 1}`);
+
+                resolve(`${yearStr}${monthStr}-${1 + count}`);
             });
         });
     }

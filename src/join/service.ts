@@ -47,7 +47,7 @@ export class JoinService extends CorpLock {
                 try {
                     const order: Order = await this.OrderDao.findOne(orderId);
                     if (!order) return;
-                    else if (![ENUM_ORDER.SALES, ENUM_ORDER.PURCHASE].includes(order.type)) return;
+                    if (![ENUM_ORDER.SALES, ENUM_ORDER.PURCHASE].includes(order.type)) return;
 
                     // SKU
                     const skus = await this.SkuDao.query({ orderId });

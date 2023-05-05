@@ -83,11 +83,13 @@ export class Sku implements _ {
     formula: ENUM_POUNDS_FORMULA;
 
     @Prop({ default: "" })
-    keyCode: string;
-    @Prop({ default: "" })
     keyOrigin: string;
     @Prop({ default: "" })
     keyFeat: string;
+    @Prop({ default: "" })
+    keyCode: string;
+    @Prop({ default: "" })
+    keyHouse: string;
 
     @Prop({ default: "", required: true })
     corpId: string;
