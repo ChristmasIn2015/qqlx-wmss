@@ -5,6 +5,7 @@ import {
     ENUM_ORDER,
     PATH_ORDER_ANALYSIS,
     PATH_CONTACT_ANALYSIS,
+    OrderAnalysis,
     getOrderAnalysisDto,
     getOrderAnalysisRes,
     getContactAnalysisDto,
@@ -31,37 +32,34 @@ export class AnalysisController {
     @Post(PATH_ORDER_ANALYSIS + "/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
     async getOrderAnalysis(@Body("dto") dto: getOrderAnalysisDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getOrderAnalysisRes> {
-        const results = [];
+        const analysis = dto;
 
-        for (const query of dto) {
-            const match = {
-                corpId: BrandDTO.corp._id,
-                type: ENUM_ORDER.NONE,
-                isDisabled: false,
-                timeCreate: { $gte: query.startTime || 0, $lte: query.endTime || Date.now() },
-            };
+        const match = {
+            corpId: BrandDTO.corp._id,
+            type: analysis.type,
+            isDisabled: false,
+            timeCreate: { $gte: analysis.startTime || 0, $lte: analysis.endTime || Date.now() },
+        };
+        const group = await this.OrderDao.aggregate([
+            { $match: match },
+            {
+                $group: {
+                    _id: "_id",
+                    count: { $sum: 1 },
+                    amount: { $sum: "$amount" },
+                    amountBookOfOrder: { $sum: "$amountBookOfOrder" },
+                    amountBookOfOrderVAT: { $sum: "$amountBookOfOrderVAT" },
+                },
+            },
+        ]);
 
-            // 销售
-            match.type = ENUM_ORDER.SALES;
-            const counter = await this.OrderDao.aggregate([
-                //
-                { $match: match },
-                { $group: { _id: "result", amount: { $sum: "$amount" }, count: { $sum: 1 } } },
-            ]);
-
-            // 返回
-            const calcu = {};
-            calcu[ENUM_ORDER.SALES] = {
-                amount: (counter[0]?.amount ?? 0) / 100,
-                count: counter[0]?.count ?? 0,
-            };
-            results.push({
-                startTime: query.startTime,
-                endTime: query.endTime,
-                calcu,
-            });
-        }
-        return results;
+        analysis.analysis = {
+            count: group[0]?.count ?? 0,
+            amount: (group[0]?.amount ?? 0) / 100,
+            amountBookOfOrder: (group[0]?.amountBookOfOrder ?? 0) / 100,
+            amountBookOfOrderVAT: (group[0]?.amountBookOfOrderVAT ?? 0) / 100,
+        };
+        return analysis;
     }
 
     @Post(PATH_CONTACT_ANALYSIS + "/get")
