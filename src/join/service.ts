@@ -11,7 +11,6 @@ import { BookDao, BookOfOrderDao } from "dao/book";
 @Injectable()
 export class JoinService extends CorpLock {
     constructor(
-        private readonly AnalysisService: AnalysisService,
         //
         private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
@@ -83,9 +82,6 @@ export class JoinService extends CorpLock {
                     updater.amountBookOfOrderVAT /= 100;
                     updater.amountBookOfOrderVATRest /= 100;
                     await this.OrderDao.updateOne(orderId, updater);
-
-                    // 补充客户分析
-                    await this.AnalysisService.updateContactAnalysis(order.corpId, order.contactId, order.type);
                 } catch (error) {
                     errorMessage = error.message;
                 } finally {

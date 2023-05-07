@@ -10,7 +10,6 @@ import {
     getOrderAnalysisRes,
     getContactAnalysisDto,
     getContactAnalysisRes,
-    ContactAnalysisJoined,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
@@ -65,30 +64,53 @@ export class AnalysisController {
     @Post(PATH_CONTACT_ANALYSIS + "/get")
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
     async getContactAnalysis(@Body("dto") dto: getContactAnalysisDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getContactAnalysisRes> {
+        // 最多查询40天
+        if (Math.abs(dto.endTime - dto.startTime) > 86400000 * 40) throw new Error(`最多查询40天`);
+
         // 搜索
-        const search = {
+        const match = {
             corpId: BrandDTO.corp?._id,
-            ...(dto.search?.contactId && { contactId: dto.search.contactId }),
+            type: dto.type,
+            isDisabled: false,
+            timeCreate: {
+                $gte: dto?.startTime || 0,
+                $lte: dto?.endTime || Date.now(),
+            },
+            ...(dto.contactId && { contactId: dto.contactId }),
         };
 
-        // 排序
-        const option = {
-            sortKey: dto.sortKey,
-            sortValue: dto.sortValue,
-            groupKey: "amount",
-        };
+        // Group查询
+        const aggre: { _id: string; count: number; amount: number; amountBookOfOrder: number; amountBookOfOrderRest: number }[] = await this.OrderDao.aggregate(
+            [
+                { $match: match },
+                {
+                    $group: {
+                        _id: "$contactId",
+                        count: { $sum: 1 },
+                        amount: { $sum: "$amount" },
+                        amountBookOfOrder: { $sum: "$amountBookOfOrder" },
+                        amountBookOfOrderRest: { $sum: "$amountBookOfOrderRest" },
+                    },
+                },
+                { $sort: { [dto.sortKey]: dto.sortValue } },
+            ]
+        );
 
-        // 正常查询
-        const page = await this.ContactAnalysisDao.page(search, dto.page, option);
-        const contacts = await this.BrandRemote.getContact({ contactIds: page.list.map((e) => e.contactId) });
-        (page.list as ContactAnalysisJoined[]).forEach((e) => {
-            e.joinContact = contacts.find((ee) => ee._id === e.contactId);
-            // 金额换算
-            e.amountOrder /= 100;
-            e.amountBookOfOrder /= 100;
-            e.amountBookOfOrderRest /= 100;
+        // Join
+        const contactIds = aggre.map((e) => e._id);
+        const contacts = await this.BrandRemote.getContact({ contactIds });
+        const result: getContactAnalysisRes = aggre.map((e) => {
+            return {
+                type: dto.type,
+                contactId: e._id,
+                joinContact: contacts.find((con) => con._id === e._id),
+                count: e.count,
+                amount: e.amount / 100,
+                amountBookOfOrder: e.amountBookOfOrder / 100,
+                amountBookOfOrderRest: e.amountBookOfOrderRest / 100,
+            };
         });
 
-        return page;
+        return result;
     }
 }
