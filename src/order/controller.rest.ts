@@ -149,7 +149,7 @@ export class OrderController extends CorpLock {
 
         // sku
         if (dto.skuList && dto.skuList.length > 0) {
-            if (order.managerId) throw Error(`单据已复核！`);
+            if (order.managerId) throw Error(`单据已签字！`);
             else if (order.accounterId) throw Error(`财务已签字！`);
             const skus = await this.SkuDao.query({ corpId: BrandDTO.corp._id, orderId: order._id });
             const skuIds = skus.map((e) => e._id);
@@ -173,7 +173,7 @@ export class OrderController extends CorpLock {
     @SetMetadata("BrandRole", ENUM_BRAND_ROLE_NORMAL)
     async deleteOrder(@Body("dto") dto: deleteOrderDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<deleteOrderRes> {
         const order = await this.OrderDao.findOne(dto.orderId);
-        if (order.managerId) throw Error(`单据已复核！`);
+        if (order.managerId) throw Error(`单据已签字！`);
         else if (order.accounterId) throw Error(`财务已签字！`);
 
         // 删除订单
@@ -181,9 +181,10 @@ export class OrderController extends CorpLock {
             // 关联订单
             if (order.parentOrderId) {
                 const parent = await this.OrderDao.findOne(order.parentOrderId);
-                if (parent.managerId) throw new Error(`来源单据已复核，请检查后重新尝试`);
+                if (parent.managerId) throw new Error(`来源单据已签字，请检查后重新尝试`);
                 else if (parent.accounterId) throw new Error(`财务已对来源单据签字，请检查后重新尝试`);
             }
+
             const childs = await this.OrderDao.count({ corpId: BrandDTO.corp._id, parentOrderId: order._id, isDisabled: false });
             if (childs > 0) throw new Error(`检查到其他订单，请删除后重新尝试`);
 
@@ -256,6 +257,7 @@ export class OrderController extends CorpLock {
 
         return SkuJoineds.map((sku) => {
             sku.pounds /= 1000;
+            sku.poundsFinal /= 1000;
             sku.price /= 100;
             return sku;
         });

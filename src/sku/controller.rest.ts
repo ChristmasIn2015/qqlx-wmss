@@ -129,6 +129,7 @@ export class SkuController {
             ...skus_getout.map((e) => e._id),
         ]);
         result.forEach((e) => {
+            e.price /= 100;
             e.pounds /= 1000;
             e.poundsFinal /= 1000;
         });

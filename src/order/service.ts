@@ -68,17 +68,17 @@ export class OrderService {
             // 采购1 入库1
             if (option.parentOrderType === ENUM_ORDER.PURCHASE) {
                 const existCount = await this.OrderDao.count({ corpId, parentOrderId, isDisabled: false, type: ENUM_ORDER.GETIN });
-                if (existCount > 0) throw new Error(`检测到入库单，请删除后试试`);
+                if (existCount > 0) throw new Error(`检测到入库单`);
             }
             // 销售1 发货1
             else if (option.parentOrderType === ENUM_ORDER.SALES) {
                 const existCount = await this.OrderDao.count({ corpId, parentOrderId, isDisabled: false, type: ENUM_ORDER.GETOUT });
-                if (existCount > 0) throw new Error(`检测到发货单，请删除后试试`);
+                if (existCount > 0) throw new Error(`检测到出库单`);
             }
             // 加工1 领料1
             else if (option.parentOrderType === ENUM_ORDER.MATERIAL) {
                 const existCount = await this.OrderDao.count({ corpId, parentOrderId, isDisabled: false, type: ENUM_ORDER.PROCESS });
-                if (existCount > 0) throw new Error(`检测到加工单，请删除后试试`);
+                if (existCount > 0) throw new Error(`检测到加工单`);
             }
             // 无法创建其他类型关联订单
             else {
