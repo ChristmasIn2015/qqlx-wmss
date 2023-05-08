@@ -103,15 +103,16 @@ export class SkuController {
         });
 
         // 加工
-        const orders_process = await this.OrderDao.query({
-            ...base,
-            type: ENUM_ORDER.PROCESS,
-            parentOrderId: { $in: [...new Set(skus_material.filter((e) => e.orderId).map((e) => e.orderId))] },
-        });
+        // const orders_process = await this.OrderDao.query({
+        //     ...base,
+        //     type: ENUM_ORDER.PROCESS,
+        //     parentOrderId: { $in: [...new Set(skus_material.filter((e) => e.orderId).map((e) => e.orderId))] },
+        // });
         const skus_process = await this.SkuDao.query({
             ...base,
             type: ENUM_ORDER.PROCESS,
-            orderId: { $in: orders_process.map((e) => e._id) },
+            deductionSkuId: dto.deductionSkuId,
+            // orderId: { $in: orders_process.map((e) => e._id) },
         });
 
         // 发货

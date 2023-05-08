@@ -5,16 +5,21 @@ import {
     ENUM_ORDER,
     PATH_ORDER_ANALYSIS,
     PATH_CONTACT_ANALYSIS,
+    PATH_SKU_ANALYSIS,
     OrderAnalysis,
     getOrderAnalysisDto,
     getOrderAnalysisRes,
     getContactAnalysisDto,
     getContactAnalysisRes,
+    getSkuAnalysisDto,
+    getSkuAnalysisRes,
+    ENUM_LAYOUT_CABINET,
 } from "qqlx-core";
 import { BrandDTO } from "qqlx-sdk";
 
 import { BrandGuard, ENUM_BRAND_ROLE_ALL } from "global/brand.guard";
 import { OrderDao } from "dao/order";
+import { SkuDao } from "dao/sku";
 import { ContactAnalysisDao } from "dao/analysis";
 import { BrandRemote } from "remote/brand";
 
@@ -24,6 +29,7 @@ export class AnalysisController {
     constructor(
         private readonly BrandRemote: BrandRemote,
         //
+        private readonly SkuDao: SkuDao,
         private readonly OrderDao: OrderDao,
         private readonly ContactAnalysisDao: ContactAnalysisDao
     ) {}
@@ -112,5 +118,27 @@ export class AnalysisController {
         });
 
         return result;
+    }
+
+    @Post(PATH_SKU_ANALYSIS + "/get")
+    @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
+    async getSkuAnalysis(@Body("dto") dto: getSkuAnalysisDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getSkuAnalysisRes> {
+        const match = {
+            corpId: BrandDTO.corp._id,
+            type: { $in: [ENUM_ORDER.GETIN, ENUM_ORDER.PROCESS] },
+            layout: ENUM_LAYOUT_CABINET.INDIVIDUAL,
+            orderIsDisabled: false,
+            isConfirmed: true,
+        };
+        const group = await this.SkuDao.aggregate([
+            { $match: match },
+            {
+                $group: { _id: "_id", poundsFinal: { $sum: "$poundsFinal" } },
+            },
+        ]);
+
+        return {
+            poundsFinal: (group[0]?.poundsFinal ?? 0) / 1000,
+        };
     }
 }

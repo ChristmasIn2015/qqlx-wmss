@@ -178,6 +178,7 @@ export class SkuService extends CorpLock {
                         type: { $in: [ENUM_ORDER.GETOUT, ENUM_ORDER.MATERIAL] },
                         isConfirmed: true,
                         orderIsDisabled: false,
+                        layout: ENUM_LAYOUT_CABINET.INDIVIDUAL,
                     };
                     const aggre = await this.SkuDao.aggregate([
                         // 计算
