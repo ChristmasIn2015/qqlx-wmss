@@ -105,6 +105,7 @@ export class OrderController extends CorpLock {
             ...(search?.contactId && { contactId: search.contactId }),
             ...(search?.code && { code: new RegExp(search.code) }),
             ...(search?.remark && { code: new RegExp(search.remark) }),
+            ...(search.type === ENUM_ORDER.GETIN && search.parentOrderId === "" && { parentOrderId: search.parentOrderId }),
         };
 
         if (dto.requireManagerId) query["managerId"] = "";
