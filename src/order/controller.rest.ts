@@ -105,7 +105,9 @@ export class OrderController extends CorpLock {
             ...(search?.contactId && { contactId: search.contactId }),
             ...(search?.code && { code: new RegExp(search.code) }),
             ...(search?.remark && { code: new RegExp(search.remark) }),
+            // 仅仅查询手动入库的入库订单
             ...(search.type === ENUM_ORDER.GETIN && search.parentOrderId === "" && { parentOrderId: search.parentOrderId }),
+            ...(search.isNotTax === true && { isNotTax: { $ne: true } }),
         };
 
         if (dto.requireManagerId) query["managerId"] = "";
@@ -146,6 +148,7 @@ export class OrderController extends CorpLock {
             managerId: dto.entity.managerId,
             accounterId: dto.entity.accounterId,
             remark: dto.entity.remark,
+            isNotTax: !!dto.entity.isNotTax,
         };
 
         // sku

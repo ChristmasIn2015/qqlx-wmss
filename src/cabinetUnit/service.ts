@@ -44,9 +44,12 @@ const recommandMap = new Map<string, { name: string; norm: string }[]>();
     ]);
 }
 recommandMap.set("焊管", [{ name: "焊管", norm: "273*20" }]);
-recommandMap.set("圆管", [{ name: "圆管", norm: "273*20" }]);
-recommandMap.set("方管", [{ name: "方管", norm: "200*10" }]);
-recommandMap.set("矩形方管", [{ name: "矩形方管", norm: "200*100*10" }]);
+recommandMap.set("圆管（米）", [{ name: "圆管", norm: "273*20" }]);
+recommandMap.set("方管（米）", [{ name: "方管", norm: "200*10" }]);
+recommandMap.set("矩形方管（米）", [{ name: "矩形方管", norm: "200*100*10" }]);
+recommandMap.set("圆管（支）", [{ name: "圆管", norm: "273*20*6000" }]);
+recommandMap.set("方管（支）", [{ name: "方管", norm: "200*10*6000" }]);
+recommandMap.set("矩形方管（支）", [{ name: "矩形方管", norm: "200*100*10*6000" }]);
 recommandMap.set("等边角钢", [{ name: "等边角钢", norm: "50*5" }]);
 recommandMap.set("不等边角钢", [{ name: "不等边角钢", norm: "60*40*5" }]);
 recommandMap.set("H型钢", [{ name: "H型钢", norm: "400*150*8*13" }]);

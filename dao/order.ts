@@ -64,6 +64,9 @@ export class Order implements _ {
     @Prop({ default: false })
     isDisabled: boolean;
 
+    @Prop({ default: false })
+    isNotTax: boolean;
+
     @Prop({
         default: 0,
         set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
