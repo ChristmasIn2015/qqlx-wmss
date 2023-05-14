@@ -15,10 +15,8 @@ export class LogRemote {
         });
     }
 
-    log(type: ENUM_LOG, path: string, chain: string, content: Record<string, any> = {}) {
-        const schema = { type, path, chain, json: JSON.stringify(content) } as Log;
-
-        const dto: postLogDto = { schema };
+    log(option: { type: ENUM_LOG; path: string; chain: string; ip: string; duration: number; json: string }) {
+        const dto: postLogDto = { schema: option as Log };
         this.client.emit("postLog", dto).toPromise(); // event async
     }
 }

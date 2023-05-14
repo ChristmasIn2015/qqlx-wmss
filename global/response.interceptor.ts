@@ -20,7 +20,14 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor {
         const path = request.path;
 
         const chain: string = (request.body.UserDTO || request.body.BrandDTO)?.chain || randomUUID();
-        this.LogRemote.log(ENUM_LOG.TRACE, `${request.path}@${request.method}`, chain); // async
+        this.LogRemote.log({
+            type: ENUM_LOG.TRACE,
+            path: `${request.path}@${request.method}`,
+            chain,
+            json: "",
+            ip: request.ip || request.connection.remoteAddress || request.socket.remoteAddress || request.socket.remoteAddress,
+            duration: 0,
+        }); // async
         const start = Date.now();
 
         return next.handle().pipe(
@@ -30,7 +37,14 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor {
                     data: data ?? null,
                     message: "成功",
                 };
-                this.LogRemote.log(ENUM_LOG.ALL, `${request.path}@${request.method}`, chain, { time: Date.now() - start }); // async
+                this.LogRemote.log({
+                    type: ENUM_LOG.ALL,
+                    path: `${request.path}@${request.method}`,
+                    chain,
+                    json: "",
+                    ip: request.ip || request.connection.remoteAddress || request.socket.remoteAddress || request.socket.remoteAddress,
+                    duration: Date.now() - start,
+                }); // async
                 return response;
             })
         );

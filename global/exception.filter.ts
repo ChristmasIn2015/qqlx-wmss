@@ -30,7 +30,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                 data: null,
                 message: MAP_ENUM_ERROR_CODE.get(exception)?.text || `未知错误：${exception}`,
             };
-            this.LogRemote.log(ENUM_LOG.ERROR, `${request.path}@${request.method}`, chain, rest); // async
+            this.LogRemote.log({
+                type: ENUM_LOG.ERROR,
+                path: `${request.path}@${request.method}`,
+                chain,
+                json: JSON.stringify(rest),
+                ip: request.ip || request.connection.remoteAddress || request.socket.remoteAddress || request.socket.remoteAddress,
+                duration: 0,
+            }); // async
             response.json(rest);
         }
         // 其他错误
@@ -40,7 +47,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                 data: null,
                 message: typeof exception === "string" ? exception : exception?.message,
             };
-            this.LogRemote.log(ENUM_LOG.ERROR, `${request.path}@${request.method}`, chain, rest); // async
+            this.LogRemote.log({
+                type: ENUM_LOG.ERROR,
+                path: `${request.path}@${request.method}`,
+                chain,
+                json: JSON.stringify(rest),
+                ip: request.ip || request.connection.remoteAddress || request.socket.remoteAddress || request.socket.remoteAddress,
+                duration: 0,
+            }); // async
             response.json(rest);
         }
     }
