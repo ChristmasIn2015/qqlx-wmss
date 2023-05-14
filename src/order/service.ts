@@ -4,6 +4,7 @@ import { MongodbSort } from "qqlx-cdk";
 import { Contact, ENUM_ORDER, Order, OrderJoined, ENUM_BRAND_ROLE, Sku } from "qqlx-core";
 
 import { OrderDao } from "dao/order";
+import { ClueDao } from "dao/clue";
 import { SkuService } from "src/sku/service";
 import { BrandRemote } from "remote/brand";
 import { UserRemote } from "remote/user";
@@ -13,6 +14,7 @@ import { MarketRemote } from "remote/market";
 export class OrderService {
     constructor(
         //
+        private readonly ClueDao: ClueDao,
         private readonly OrderDao: OrderDao,
         private readonly SkuService: SkuService,
         // private readonly UserRemote: UserRemote,
@@ -23,6 +25,10 @@ export class OrderService {
     async setOrderJoined(exits: Order[], option?: { corpId: string; joinSku?: boolean }) {
         const contactIds = [...new Set(exits.map((e) => e.contactId))];
         const contacts = await this.BrandRemote.getContact({ contactIds });
+
+        const codes = [...new Set(exits.map((e) => e.code))];
+        const or = codes.map((code) => ({ corpId: option?.corpId, content: new RegExp(`打印了销售单 ${code}`) }));
+        const clues = await this.ClueDao.query({ $or: or });
 
         const skus: Sku[] = [];
         if (option?.joinSku) {
@@ -37,6 +43,10 @@ export class OrderService {
             const _order = order as OrderJoined;
             _order.joinContact = contacts.find((c) => c._id === _order.contactId);
             _order.joinSku = skus.filter((e) => e.orderId === _order._id);
+            if (order.type === ENUM_ORDER.SALES) {
+                const count = clues.filter((clue) => clue.content.includes(_order.code)).length;
+                if (count > 0) _order.joinCluePrint = `${count}次`;
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import { Model } from "mongoose";
 
 import { Book as _Book, BookOfOrder as _BookOfOrder, ENUM_BOOK_TYPE, ENUM_BOOK_DIRECTION, ENUM_ORDER } from "qqlx-core";
 import { MongooseDao } from "qqlx-sdk";
+import { bignumber, multiply } from "mathjs";
 
 @Schema()
 export class Book implements _Book {
@@ -25,7 +26,7 @@ export class Book implements _Book {
     code: string;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amount: number;
     @Prop({ default: "" })
@@ -42,23 +43,23 @@ export class Book implements _Book {
 
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfOrder: number;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfOrderRest: number;
 
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfSelf: number;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfSelfRest: number;
 
@@ -124,7 +125,7 @@ export class BookOfOrder implements _BookOfOrder {
     orderContactId: string;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amount: number;
 

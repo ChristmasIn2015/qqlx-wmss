@@ -4,6 +4,7 @@ import { Prop, Schema, SchemaFactory, InjectModel } from "@nestjs/mongoose";
 
 import { ENUM_ORDER, Order as _ } from "qqlx-core";
 import { MongooseDao } from "qqlx-sdk";
+import { bignumber, multiply } from "mathjs";
 
 @Schema()
 export class Order implements _ {
@@ -56,7 +57,7 @@ export class Order implements _ {
     code: string;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amount: number;
     @Prop({ default: "" })
@@ -69,23 +70,23 @@ export class Order implements _ {
 
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfOrder: number;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfOrderRest: number;
 
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfOrderVAT: number;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     amountBookOfOrderVATRest: number;
 

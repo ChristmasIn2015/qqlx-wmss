@@ -4,6 +4,7 @@ import { Prop, Schema, SchemaFactory, InjectModel } from "@nestjs/mongoose";
 
 import { ENUM_POUNDS_FORMULA, ENUM_LAYOUT_CABINET, Cabinet as _Cabinet, CabinetUnit as _CabinetUnit } from "qqlx-core";
 import { MongooseDao } from "qqlx-sdk";
+import { bignumber, multiply } from "mathjs";
 
 @Schema()
 export class Cabinet implements _Cabinet {
@@ -86,7 +87,7 @@ export class CabinetUnit implements _CabinetUnit {
     norm: string;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     price: number;
     @Prop({ default: "" })
@@ -99,7 +100,7 @@ export class CabinetUnit implements _CabinetUnit {
     countFinal: number;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(1000)).toString()),
     })
     poundsFinal: number;
 

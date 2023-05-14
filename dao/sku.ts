@@ -4,6 +4,7 @@ import { Prop, Schema, SchemaFactory, InjectModel } from "@nestjs/mongoose";
 
 import { Sku as _, ENUM_ORDER, ENUM_POUNDS_FORMULA, ENUM_LAYOUT_CABINET } from "qqlx-core";
 import { MongooseDao } from "qqlx-sdk";
+import { chain, bignumber, multiply } from "mathjs";
 
 @Schema()
 export class Sku implements _ {
@@ -33,7 +34,7 @@ export class Sku implements _ {
 
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(1000)).toString()),
     })
     pounds: number;
     @Prop({
@@ -43,7 +44,7 @@ export class Sku implements _ {
     count: number;
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 1000).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(1000)).toString()),
     })
     poundsFinal: number;
     @Prop({
@@ -54,7 +55,7 @@ export class Sku implements _ {
 
     @Prop({
         default: 0,
-        set: (value) => parseInt(((Number(value) || 0) * 100).toString()),
+        set: (value) => parseInt(multiply(bignumber(Number(value) || 0), bignumber(100)).toString()),
     })
     price: number;
     @Prop({ default: false })
