@@ -27,7 +27,7 @@ export class OrderService {
         const contacts = await this.BrandRemote.getContact({ contactIds });
 
         const codes = [...new Set(exits.map((e) => e.code))];
-        const or = codes.map((code) => ({ corpId: option?.corpId, content: new RegExp(`打印了销售单 ${code}`) }));
+        const or = codes.map((code) => ({ corpId: option?.corpId, content: new RegExp(`打印了销售单 ${code}，`) }));
         const clues = or.length > 0 ? await this.ClueDao.query({ $or: or }) : [];
 
         const skus: Sku[] = [];
