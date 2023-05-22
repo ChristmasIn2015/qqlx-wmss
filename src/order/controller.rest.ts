@@ -8,6 +8,8 @@ import {
     postOrderRes,
     getOrderDto,
     getOrderRes,
+    getOrderGroupDto,
+    getOrderGroupRes,
     putOrderDto,
     putOrderRes,
     deleteOrderDto,
@@ -114,7 +116,7 @@ export class OrderController extends CorpLock {
         if (dto.requireAccounterId) query["accounterId"] = "";
 
         // 排序
-        const option = { sortKey: dto.sortKey, sortValue: dto.sortValue, groupKey: "amount" };
+        const option = { sortKey: dto.sortKey, sortValue: dto.sortValue };
 
         // 查询（并匹配用户信息）
         const page = await this.OrderDao.page(query, dto.page, option);
@@ -134,6 +136,55 @@ export class OrderController extends CorpLock {
             });
         });
         return page as PageRes<OrderJoined>;
+    }
+
+    @Post("/group/get")
+    @SetMetadata("BrandRole", ENUM_BRAND_ROLE_ALL)
+    async getOrderGroup(@Body("dto") dto: getOrderGroupDto, @Body("BrandDTO") BrandDTO: BrandDTO): Promise<getOrderGroupRes> {
+        const search = dto.search;
+        trimObject(search);
+
+        const query = {
+            corpId: BrandDTO.corp._id,
+            type: search.type,
+            isDisabled: search.isDisabled,
+            ...(search?.contactId && { contactId: search.contactId }),
+            ...(search?.code && { code: new RegExp(search.code) }),
+            ...(search?.remark && { code: new RegExp(search.remark) }),
+            // 仅仅查询手动入库的入库订单
+            ...(search.type === ENUM_ORDER.GETIN && search.parentOrderId === "" && { parentOrderId: search.parentOrderId }),
+            ...(search.isNotTax === true && { isNotTax: { $ne: true } }),
+            timeCreate: {
+                $gte: dto.page?.startTime || 0,
+                $lte: dto.page?.endTime || Date.now(),
+            },
+        };
+
+        if (dto.requireManagerId) query["managerId"] = "";
+        if (dto.requireAccounterId) query["accounterId"] = "";
+
+        // group
+        const aggre = await this.OrderDao.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: "_id",
+                    amount: { $sum: "$amount" },
+                    amountBookOfOrder: { $sum: "$amountBookOfOrder" },
+                    amountBookOfOrderRest: { $sum: "$amountBookOfOrderRest" },
+                    amountBookOfOrderVAT: { $sum: "$amountBookOfOrderVAT" },
+                    amountBookOfOrderVATRest: { $sum: "$amountBookOfOrderVATRest" },
+                },
+            },
+        ]);
+
+        return {
+            amount: (aggre[0]?.amount ?? 0) / 100,
+            amountBookOfOrder: (aggre[0]?.amountBookOfOrder ?? 0) / 100,
+            amountBookOfOrderRest: (aggre[0]?.amountBookOfOrderRest ?? 0) / 100,
+            amountBookOfOrderVAT: (aggre[0]?.amountBookOfOrderVAT ?? 0) / 100,
+            amountBookOfOrderVATRest: (aggre[0]?.amountBookOfOrderVATRest ?? 0) / 100,
+        };
     }
 
     @Put()
