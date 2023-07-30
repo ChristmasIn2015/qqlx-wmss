@@ -78,6 +78,7 @@ export class OrderController extends CorpLock {
         schema.corpId = BrandDTO.corp._id;
         schema.creatorId = BrandDTO.userInfo.userId;
         schema.code = await this.getCode(BrandDTO.corp._id, schema.type);
+        schema.timeContract = Date.now();
         const entity = await this.OrderDao.create(schema);
 
         // 关联Sku更新
