@@ -66,6 +66,9 @@ export class Order implements _ {
     isDisabled: boolean;
 
     @Prop({ default: false })
+    timeContract: number;
+
+    @Prop({ default: 0 })
     isNotTax: boolean;
 
     @Prop({

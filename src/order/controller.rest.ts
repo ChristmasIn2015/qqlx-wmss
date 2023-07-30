@@ -199,6 +199,7 @@ export class OrderController extends CorpLock {
             managerId: dto.entity.managerId,
             accounterId: dto.entity.accounterId,
             remark: dto.entity.remark,
+            timeContract: dto.entity.timeContract,
             isNotTax: !!dto.entity.isNotTax,
         };
 
