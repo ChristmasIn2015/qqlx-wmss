@@ -77,7 +77,7 @@ export class BookController extends CorpLock {
             ...(search.remark && { remark: new RegExp(search.remark) }),
             ...(search.keyOrigin && { keyOrigin: new RegExp(search.keyOrigin) }),
             ...(search.keyCode && { keyCode: new RegExp(search.keyCode) }),
-            ...(search.keyHouse && { keyHouse: search.keyHouse }),
+            ...(search.keyHouse && { keyHouse: new RegExp(search.keyHouse) }),
         };
 
         // 排序
