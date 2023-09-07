@@ -293,6 +293,7 @@ export class OrderController extends CorpLock {
 
         // View
         return {
+            amount: order.amount / 100,
             skuList: infos[0],
             bookOfOrderList: infos[1],
             //@ts-ignore
